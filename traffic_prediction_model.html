@@ -1,0 +1,3418 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AI-Based Smart Traffic Congestion Prediction System</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/tabler-icons.min.css">
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+<script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+<style>
+:root {
+  --bg: #08111f;
+  --panel: #101c2f;
+  --panel-2: #14243b;
+  --panel-3: #192e4a;
+  --line: rgba(255,255,255,.1);
+  --line-2: rgba(255,255,255,.18);
+  --text: #edf4ff;
+  --muted: #91a3bd;
+  --green: #25d695;
+  --blue: #58a6ff;
+  --yellow: #f8c14a;
+  --red: #ff5c70;
+  --violet: #a889ff;
+  --cyan: #32d5e8;
+  --shadow: 0 18px 45px rgba(0,0,0,.25);
+  --mono: "JetBrains Mono", monospace;
+  --sans: "Inter", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+}
+
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+body {
+  margin: 0;
+  min-height: 100vh;
+  background:
+    radial-gradient(circle at top left, rgba(50,213,232,.12), transparent 36rem),
+    linear-gradient(135deg, #08111f 0%, #0b1526 52%, #101523 100%);
+  color: var(--text);
+  font-family: var(--sans);
+}
+button, select, input { font: inherit; }
+
+.topbar {
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: .95rem clamp(1rem, 3vw, 2rem);
+  background: rgba(8,17,31,.86);
+  border-bottom: 1px solid var(--line);
+  backdrop-filter: blur(16px);
+}
+.brand {
+  display: flex;
+  align-items: center;
+  gap: .8rem;
+  min-width: 0;
+}
+.brand-mark {
+  width: 42px;
+  height: 42px;
+  display: grid;
+  place-items: center;
+  border-radius: 8px;
+  color: var(--green);
+  background: rgba(37,214,149,.13);
+  border: 1px solid rgba(37,214,149,.35);
+}
+.brand-title {
+  font-size: 1rem;
+  font-weight: 800;
+  letter-spacing: 0;
+  white-space: nowrap;
+}
+.brand-sub {
+  margin-top: .1rem;
+  color: var(--muted);
+  font-family: var(--mono);
+  font-size: .72rem;
+}
+.live-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: .45rem;
+  color: var(--green);
+  font-family: var(--mono);
+  font-size: .75rem;
+}
+.live-dot {
+  width: .55rem;
+  height: .55rem;
+  border-radius: 999px;
+  background: var(--green);
+  box-shadow: 0 0 0 .35rem rgba(37,214,149,.12);
+}
+
+.shell {
+  width: min(1400px, 100%);
+  margin: 0 auto;
+  padding: 1.25rem clamp(1rem, 3vw, 2rem) 2rem;
+}
+.layout {
+  display: grid;
+  grid-template-columns: minmax(290px, 360px) minmax(0, 1fr);
+  gap: 1rem;
+  align-items: start;
+}
+.panel {
+  background: rgba(16,28,47,.92);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  box-shadow: var(--shadow);
+}
+.sidebar {
+  position: sticky;
+  top: 5.25rem;
+  overflow: hidden;
+}
+.panel-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 1rem 1rem .85rem;
+  border-bottom: 1px solid var(--line);
+}
+.panel-title {
+  display: flex;
+  align-items: center;
+  gap: .55rem;
+  font-size: .92rem;
+  font-weight: 800;
+}
+.panel-title i { color: var(--cyan); }
+.panel-body { padding: 1rem; }
+.control-grid {
+  display: grid;
+  gap: .85rem;
+}
+.field label {
+  display: block;
+  margin-bottom: .35rem;
+  color: var(--muted);
+  font-family: var(--mono);
+  font-size: .7rem;
+  text-transform: uppercase;
+}
+.field select,
+.field input[type="text"],
+.field input[type="range"] {
+  width: 100%;
+}
+.field select,
+.field input[type="text"] {
+  min-height: 42px;
+  padding: 0 .8rem;
+  color: var(--text);
+  background: var(--panel-2);
+  border: 1px solid var(--line-2);
+  border-radius: 8px;
+  outline: none;
+}
+.field input[type="text"]::placeholder { color: #60728e; }
+.field select:focus,
+.field input[type="text"]:focus { border-color: var(--cyan); }
+.range-row {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: .75rem;
+  align-items: center;
+}
+.range-value {
+  min-width: 3rem;
+  text-align: right;
+  color: var(--cyan);
+  font-family: var(--mono);
+  font-size: .82rem;
+}
+input[type="range"] { accent-color: var(--cyan); }
+.toggles {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: .55rem;
+}
+.toggle {
+  display: flex;
+  align-items: center;
+  gap: .5rem;
+  min-height: 38px;
+  padding: .45rem .55rem;
+  color: var(--muted);
+  background: var(--panel-2);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  font-size: .82rem;
+  cursor: pointer;
+}
+.toggle input { accent-color: var(--green); }
+.action-row {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: .65rem;
+  margin-top: 1rem;
+}
+.api-status {
+  margin-top: .4rem;
+  color: var(--muted);
+  font-size: .72rem;
+  line-height: 1.4;
+}
+.api-status.ready { color: var(--green); }
+.api-status.error { color: var(--red); }
+.react-panel {
+  margin-top: 1rem;
+  padding: .85rem;
+  background: linear-gradient(135deg, rgba(88,166,255,.12), rgba(37,214,149,.09));
+  border: 1px solid rgba(88,166,255,.24);
+  border-radius: 8px;
+}
+.react-panel-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: .7rem;
+  margin-bottom: .75rem;
+}
+.react-panel-title {
+  display: flex;
+  align-items: center;
+  gap: .45rem;
+  font-size: .84rem;
+  font-weight: 800;
+}
+.react-panel-title i { color: var(--cyan); }
+.react-chip {
+  padding: .18rem .45rem;
+  border-radius: 999px;
+  background: rgba(37,214,149,.13);
+  color: var(--green);
+  font-family: var(--mono);
+  font-size: .62rem;
+  font-weight: 800;
+}
+.react-trip {
+  display: grid;
+  gap: .35rem;
+  margin-bottom: .75rem;
+}
+.react-trip span {
+  color: var(--muted);
+  font-family: var(--mono);
+  font-size: .64rem;
+  text-transform: uppercase;
+}
+.react-trip strong {
+  font-size: .88rem;
+  line-height: 1.35;
+}
+.react-actions {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: .5rem;
+}
+.react-action {
+  min-height: 36px;
+  padding: 0 .55rem;
+  color: var(--text);
+  background: rgba(20,36,59,.82);
+  border: 1px solid var(--line-2);
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: .75rem;
+  font-weight: 700;
+}
+.react-action:hover {
+  border-color: rgba(50,213,232,.6);
+  color: var(--cyan);
+}
+.react-action.primary {
+  color: #06111e;
+  background: var(--cyan);
+  border-color: transparent;
+}
+.react-note {
+  margin-top: .7rem;
+  color: var(--muted);
+  font-size: .72rem;
+  line-height: 1.45;
+}
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: .45rem;
+  min-height: 42px;
+  padding: 0 .85rem;
+  color: #05101d;
+  background: var(--green);
+  border: 0;
+  border-radius: 8px;
+  font-weight: 800;
+  cursor: pointer;
+}
+.btn.secondary {
+  width: 42px;
+  padding: 0;
+  color: var(--text);
+  background: var(--panel-3);
+  border: 1px solid var(--line-2);
+}
+.btn:hover { filter: brightness(1.06); }
+
+.main {
+  display: grid;
+  gap: 1rem;
+}
+.hero {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(290px, 420px);
+  gap: 1rem;
+  align-items: stretch;
+}
+.system-card {
+  padding: clamp(1.15rem, 2vw, 1.6rem);
+  overflow: hidden;
+}
+.eyebrow {
+  display: inline-flex;
+  gap: .4rem;
+  align-items: center;
+  color: var(--cyan);
+  font-family: var(--mono);
+  font-size: .73rem;
+  text-transform: uppercase;
+}
+h1 {
+  margin: .65rem 0 .75rem;
+  max-width: 780px;
+  font-size: clamp(1.9rem, 4vw, 3.6rem);
+  line-height: 1.02;
+  letter-spacing: 0;
+}
+.lead {
+  max-width: 780px;
+  margin: 0;
+  color: #c6d5ea;
+  font-size: 1rem;
+  line-height: 1.65;
+}
+.feature-strip {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: .7rem;
+  margin-top: 1.25rem;
+}
+.feature {
+  padding: .8rem;
+  background: rgba(20,36,59,.8);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+}
+.feature i { color: var(--cyan); }
+.feature strong {
+  display: block;
+  margin-top: .35rem;
+  font-size: .85rem;
+}
+.feature span {
+  display: block;
+  margin-top: .2rem;
+  color: var(--muted);
+  font-size: .78rem;
+  line-height: 1.45;
+}
+
+.score-card {
+  display: grid;
+  align-content: space-between;
+  min-height: 100%;
+  padding: 1rem;
+}
+.score-ring {
+  --pct: 0;
+  width: min(220px, 62vw);
+  aspect-ratio: 1;
+  margin: .35rem auto 1rem;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background:
+    radial-gradient(circle closest-side, var(--panel) 72%, transparent 73%),
+    conic-gradient(var(--ring, var(--green)) calc(var(--pct) * 1%), rgba(255,255,255,.08) 0);
+}
+.score-ring strong {
+  display: block;
+  font-family: var(--mono);
+  font-size: 3rem;
+  line-height: 1;
+  text-align: center;
+}
+.score-ring span {
+  display: block;
+  margin-top: .3rem;
+  color: var(--muted);
+  font-family: var(--mono);
+  font-size: .72rem;
+  text-align: center;
+}
+.score-meta {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: .6rem;
+}
+.mini-stat {
+  padding: .75rem;
+  background: var(--panel-2);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+}
+.mini-stat span {
+  display: block;
+  color: var(--muted);
+  font-family: var(--mono);
+  font-size: .68rem;
+}
+.mini-stat strong {
+  display: block;
+  margin-top: .25rem;
+  font-family: var(--mono);
+  font-size: 1.05rem;
+}
+
+.grid-2 {
+  display: grid;
+  grid-template-columns: minmax(0, 1.08fr) minmax(330px, .92fr);
+  gap: 1rem;
+}
+.grid-3 {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1rem;
+}
+
+.timeline {
+  display: grid;
+  gap: .65rem;
+}
+.time-row {
+  display: grid;
+  grid-template-columns: 5rem minmax(0, 1fr) 4rem 5.2rem 5.6rem;
+  gap: .65rem;
+  align-items: center;
+  min-height: 42px;
+  padding: .55rem .65rem;
+  background: var(--panel-2);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+}
+.time-row span:first-child,
+.time-row strong,
+.time-row em {
+  font-family: var(--mono);
+  font-size: .78rem;
+  font-style: normal;
+}
+.bar-track {
+  height: .55rem;
+  overflow: hidden;
+  background: rgba(255,255,255,.08);
+  border-radius: 99px;
+}
+.bar-fill {
+  width: 0;
+  height: 100%;
+  border-radius: inherit;
+  background: var(--green);
+  transition: width .7s ease;
+}
+.badge {
+  justify-self: end;
+  padding: .22rem .45rem;
+  border-radius: 999px;
+  background: rgba(88,166,255,.14);
+  color: var(--blue);
+  font-family: var(--mono);
+  font-size: .65rem;
+  font-weight: 800;
+}
+.badge.high { color: var(--yellow); background: rgba(248,193,74,.14); }
+.badge.severe { color: var(--red); background: rgba(255,92,112,.14); }
+.badge.clear { color: var(--green); background: rgba(37,214,149,.14); }
+
+.chart-wrap {
+  height: 260px;
+  padding: .5rem;
+  background: var(--panel-2);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+}
+#forecastCanvas {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+.map-card .panel-body { padding: 0; }
+.traffic-map {
+  position: relative;
+  min-height: 430px;
+  overflow: hidden;
+  border-radius: 0 0 8px 8px;
+  background:
+    linear-gradient(90deg, rgba(255,255,255,.04) 1px, transparent 1px),
+    linear-gradient(rgba(255,255,255,.04) 1px, transparent 1px),
+    #0d1b2d;
+  background-size: 42px 42px;
+}
+.free-map {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  min-height: 100%;
+}
+.traffic-map.free-map-active {
+  background: #0d1b2d;
+}
+.traffic-map.free-map-active::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  pointer-events: none;
+  background: linear-gradient(180deg, rgba(8,17,31,.08), rgba(8,17,31,.38));
+}
+.leaflet-container {
+  width: 100%;
+  height: 100%;
+  min-height: 430px;
+  background: #0d1b2d;
+  color: #172033;
+}
+.leaflet-control-attribution {
+  font-size: 10px;
+}
+.traffic-map.free-map-active .map-routes,
+.traffic-map.free-map-active .route-line,
+.traffic-map.free-map-active .journey-marker,
+.traffic-map.free-map-active .zone-node {
+  display: none;
+}
+.map-routes {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+}
+.map-routes path {
+  fill: none;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  opacity: .42;
+}
+.map-routes path.active {
+  opacity: .95;
+  filter: drop-shadow(0 0 10px rgba(50,213,232,.35));
+}
+.route-line {
+  position: absolute;
+  z-index: 2;
+  height: 8px;
+  border-radius: 99px;
+  transform-origin: left center;
+  opacity: .9;
+}
+.route-line.best { background: var(--green); }
+.route-line.alt { background: var(--blue); }
+.route-line.slow { background: var(--red); }
+.road-a { width: 74%; left: 12%; top: 48%; transform: rotate(-8deg); }
+.road-b { width: 64%; left: 22%; top: 25%; transform: rotate(21deg); }
+.road-c { width: 58%; left: 20%; top: 70%; transform: rotate(15deg); }
+.zone-node {
+  position: absolute;
+  width: 46px;
+  height: 46px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  color: #06111e;
+  font-family: var(--mono);
+  font-size: .72rem;
+  font-weight: 900;
+  border: 3px solid rgba(255,255,255,.8);
+  box-shadow: 0 0 0 .45rem rgba(255,255,255,.08), 0 12px 30px rgba(0,0,0,.35);
+  cursor: pointer;
+}
+.zone-node.active { outline: 3px solid var(--cyan); outline-offset: 4px; }
+.journey-marker {
+  position: absolute;
+  z-index: 4;
+  display: grid;
+  place-items: center;
+  width: 42px;
+  height: 42px;
+  border: 2px solid rgba(255,255,255,.85);
+  border-radius: 50%;
+  color: #06111e;
+  box-shadow: 0 12px 28px rgba(0,0,0,.36);
+}
+.journey-marker.source { background: var(--green); }
+.journey-marker.destination { background: var(--red); }
+.journey-marker i { font-size: 1.2rem; }
+.node-label {
+  position: absolute;
+  left: 50%;
+  top: calc(100% + .35rem);
+  transform: translateX(-50%);
+  min-width: 8rem;
+  color: var(--text);
+  text-align: center;
+  font-family: var(--mono);
+  font-size: .68rem;
+  text-shadow: 0 1px 3px #000;
+}
+.map-legend {
+  position: absolute;
+  right: .8rem;
+  bottom: .8rem;
+  display: grid;
+  gap: .4rem;
+  padding: .7rem;
+  background: rgba(8,17,31,.82);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  backdrop-filter: blur(10px);
+}
+.trip-card {
+  position: absolute;
+  left: .8rem;
+  bottom: .8rem;
+  z-index: 5;
+  width: min(330px, calc(100% - 1.6rem));
+  padding: .78rem;
+  background: rgba(8,17,31,.84);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  backdrop-filter: blur(10px);
+}
+.trip-card span {
+  display: block;
+  color: var(--muted);
+  font-family: var(--mono);
+  font-size: .66rem;
+  text-transform: uppercase;
+}
+.trip-card strong {
+  display: block;
+  margin-top: .24rem;
+  font-size: .86rem;
+  line-height: 1.35;
+}
+.trip-card small {
+  display: block;
+  margin-top: .45rem;
+  color: var(--cyan);
+  font-family: var(--mono);
+}
+.legend-item {
+  display: flex;
+  align-items: center;
+  gap: .45rem;
+  color: var(--muted);
+  font-size: .73rem;
+}
+.legend-swatch {
+  width: 1.1rem;
+  height: .45rem;
+  border-radius: 99px;
+}
+
+.list {
+  display: grid;
+  gap: .65rem;
+}
+.risk-item,
+.route-item {
+  display: grid;
+  gap: .35rem;
+  padding: .8rem;
+  background: var(--panel-2);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+}
+.route-item {
+  cursor: pointer;
+}
+.route-item.selected {
+  border-color: rgba(50,213,232,.55);
+  box-shadow: inset 0 0 0 1px rgba(50,213,232,.18);
+}
+.risk-top,
+.route-top {
+  display: flex;
+  justify-content: space-between;
+  gap: .8rem;
+  align-items: center;
+}
+.risk-top strong,
+.route-top strong { font-size: .9rem; }
+.risk-item p,
+.route-item p {
+  margin: 0;
+  color: var(--muted);
+  font-size: .8rem;
+  line-height: 1.45;
+}
+.route-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: .7rem;
+  color: var(--muted);
+  font-family: var(--mono);
+  font-size: .72rem;
+}
+.map-link {
+  color: var(--cyan);
+  text-decoration: none;
+  font-family: var(--mono);
+  font-size: .72rem;
+}
+
+.analysis {
+  display: grid;
+  gap: .7rem;
+  color: #d4e3f7;
+  line-height: 1.65;
+  font-size: .92rem;
+}
+.signal-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: .7rem;
+}
+.signal {
+  padding: .8rem;
+  background: var(--panel-2);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+}
+.signal span {
+  display: block;
+  color: var(--muted);
+  font-family: var(--mono);
+  font-size: .67rem;
+  text-transform: uppercase;
+}
+.signal strong {
+  display: block;
+  margin-top: .25rem;
+  font-size: .95rem;
+}
+.architecture {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: .7rem;
+}
+.model-step {
+  padding: .85rem;
+  background: var(--panel-2);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+}
+.model-step i { color: var(--violet); }
+.model-step strong {
+  display: block;
+  margin: .45rem 0 .25rem;
+  font-size: .85rem;
+}
+.model-step span {
+  color: var(--muted);
+  font-size: .76rem;
+  line-height: 1.45;
+}
+
+@media (max-width: 1100px) {
+  .layout,
+  .hero,
+  .grid-2 { grid-template-columns: 1fr; }
+  .sidebar { position: static; }
+}
+@media (max-width: 760px) {
+  .topbar { align-items: flex-start; }
+  .brand-title { white-space: normal; }
+  .feature-strip,
+  .grid-3,
+  .signal-grid,
+  .architecture { grid-template-columns: 1fr; }
+  .time-row { grid-template-columns: 4.2rem 1fr 3.4rem 5.6rem; }
+  .time-row em { display: none; }
+  .toggles,
+  .score-meta { grid-template-columns: 1fr; }
+  .traffic-map { min-height: 360px; }
+}
+</style>
+</head>
+<body>
+<header class="topbar">
+  <div class="brand">
+    <div class="brand-mark"><i class="ti ti-traffic-lights"></i></div>
+    <div>
+      <div class="brand-title">AI-Based Smart Traffic Congestion Prediction System</div>
+      <div class="brand-sub">Historical records + weather + peak-hour patterns</div>
+    </div>
+  </div>
+  <div class="live-pill"><span class="live-dot"></span><span>MODEL ACTIVE</span></div>
+</header>
+
+<main class="shell">
+  <div class="layout">
+    <aside class="panel sidebar">
+      <div class="panel-head">
+        <div class="panel-title"><i class="ti ti-adjustments-horizontal"></i>Prediction Inputs</div>
+      </div>
+      <div class="panel-body">
+        <div class="control-grid">
+          <div class="field">
+            <label for="zoneSelect">Monitored Corridor</label>
+            <select id="zoneSelect"></select>
+          </div>
+          <div class="field">
+            <label for="sourceSelect">Route Source</label>
+            <select id="sourceSelect"></select>
+          </div>
+          <div class="field">
+            <label for="destinationSelect">Final Destination</label>
+            <select id="destinationSelect"></select>
+          </div>
+          <div class="field">
+            <label for="timeSelect">Forecast Start</label>
+            <select id="timeSelect">
+              <option value="6">06:00 Early commute</option>
+              <option value="8" selected>08:00 Morning peak</option>
+              <option value="10">10:00 Late morning</option>
+              <option value="13">13:00 Midday</option>
+              <option value="16">16:00 School dispersal</option>
+              <option value="18">18:00 Evening peak</option>
+              <option value="21">21:00 Night</option>
+            </select>
+          </div>
+          <div class="field">
+            <label for="weatherSelect">Weather Conditions</label>
+            <select id="weatherSelect">
+              <option value="clear">Clear and dry</option>
+              <option value="cloudy">Cloudy</option>
+              <option value="lightRain">Light rain</option>
+              <option value="heavyRain">Heavy monsoon rain</option>
+              <option value="fog">Foggy morning</option>
+              <option value="heat">Extreme heat</option>
+            </select>
+          </div>
+          <div class="field">
+            <label for="daySelect">Day Pattern</label>
+            <select id="daySelect">
+              <option value="weekday" selected>Weekday</option>
+              <option value="weekend">Weekend</option>
+              <option value="holiday">Public holiday</option>
+              <option value="festival">Festival day</option>
+              <option value="exam">Exam season</option>
+            </select>
+          </div>
+          <div class="field">
+            <label for="incidentRange">Incident Load</label>
+            <div class="range-row">
+              <input id="incidentRange" type="range" min="0" max="30" value="8">
+              <span class="range-value" id="incidentValue">8%</span>
+            </div>
+          </div>
+          <div class="field">
+            <label>Real-Time Feeds</label>
+            <div class="toggles">
+              <label class="toggle"><input id="iotFeed" type="checkbox" checked>IoT sensors</label>
+              <label class="toggle"><input id="gpsFeed" type="checkbox" checked>GPS speed</label>
+              <label class="toggle"><input id="eventFeed" type="checkbox">Event alert</label>
+              <label class="toggle"><input id="signalFeed" type="checkbox" checked>Signals</label>
+            </div>
+          </div>
+          <div class="api-status" id="apiStatus">Free map mode: OpenStreetMap tiles + OSRM routing, no API key needed.</div>
+        </div>
+        <div class="action-row">
+          <button class="btn" id="predictBtn"><i class="ti ti-sparkles"></i>Predict Congestion</button>
+          <button class="btn secondary" id="resetBtn" title="Reset inputs"><i class="ti ti-refresh"></i></button>
+        </div>
+        <div id="reactControlPanel"></div>
+      </div>
+    </aside>
+
+    <section class="main">
+      <div class="hero">
+        <section class="panel system-card">
+          <div class="eyebrow"><i class="ti ti-brain"></i>Ensemble AI Traffic Forecast</div>
+          <h1>Predict congestion, detect risk zones, and recommend faster alternate routes.</h1>
+          <p class="lead">The dashboard simulates a production traffic intelligence system using historical corridor records, live-feed adjustments, weather penalties, and peak-hour behavior to forecast the next two hours.</p>
+          <div class="feature-strip">
+            <div class="feature"><i class="ti ti-database"></i><strong>Historical Records</strong><span>Zone baseline, weekday behavior, event memory, and vehicle volume.</span></div>
+            <div class="feature"><i class="ti ti-cloud-rain"></i><strong>Weather Impact</strong><span>Rain, fog, heat, and visibility influence vehicle speed and delay.</span></div>
+            <div class="feature"><i class="ti ti-route"></i><strong>Route Engine</strong><span>Compares ETA, distance, risk exposure, and free OSRM map routes.</span></div>
+          </div>
+        </section>
+
+        <section class="panel score-card">
+          <div class="panel-title"><i class="ti ti-gauge"></i>Current Congestion</div>
+          <div class="score-ring" id="scoreRing">
+            <div>
+              <strong id="scoreValue">0%</strong>
+              <span id="scoreLabel">READY</span>
+            </div>
+          </div>
+          <div class="score-meta">
+            <div class="mini-stat"><span>Peak in 2h</span><strong id="peakValue">0%</strong></div>
+            <div class="mini-stat"><span>Avg delay</span><strong id="delayValue">0 min</strong></div>
+            <div class="mini-stat"><span>Vehicles/hr</span><strong id="vehicleValue">0</strong></div>
+            <div class="mini-stat"><span>Confidence</span><strong id="confidenceValue">0%</strong></div>
+          </div>
+        </section>
+      </div>
+
+      <section class="grid-2">
+        <section class="panel map-card">
+          <div class="panel-head">
+            <div class="panel-title"><i class="ti ti-map-2"></i>Interactive Traffic Visualization</div>
+            <span class="badge clear" id="mapStatus">LIVE</span>
+          </div>
+          <div class="panel-body">
+            <div class="traffic-map" id="trafficMap">
+              <div class="free-map" id="freeMap"></div>
+              <svg class="map-routes" id="mapRoutes" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true"></svg>
+              <div class="route-line best road-a"></div>
+              <div class="route-line alt road-b"></div>
+              <div class="route-line slow road-c"></div>
+              <div class="journey-marker source" id="sourceMarker"><i class="ti ti-map-pin"></i></div>
+              <div class="journey-marker destination" id="destinationMarker"><i class="ti ti-flag-3"></i></div>
+              <div class="trip-card" id="tripCard"></div>
+              <div class="map-legend">
+                <div class="legend-item"><span class="legend-swatch" style="background:var(--green)"></span>Best route</div>
+                <div class="legend-item"><span class="legend-swatch" style="background:var(--blue)"></span>Alternate route</div>
+                <div class="legend-item"><span class="legend-swatch" style="background:var(--red)"></span>Slow route</div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section class="panel">
+          <div class="panel-head">
+            <div class="panel-title"><i class="ti ti-chart-line"></i>Upcoming Time Intervals</div>
+          </div>
+          <div class="panel-body">
+            <div class="timeline" id="timeline"></div>
+          </div>
+        </section>
+      </section>
+
+      <section class="grid-2">
+        <section class="panel">
+          <div class="panel-head">
+            <div class="panel-title"><i class="ti ti-chart-area-line"></i>Forecast Curve</div>
+          </div>
+          <div class="panel-body">
+            <div class="chart-wrap"><canvas id="forecastCanvas"></canvas></div>
+          </div>
+        </section>
+
+        <section class="panel">
+          <div class="panel-head">
+            <div class="panel-title"><i class="ti ti-message-2-cog"></i>AI Traffic Analysis</div>
+          </div>
+          <div class="panel-body">
+            <div class="analysis" id="analysisText"></div>
+          </div>
+        </section>
+      </section>
+
+      <section class="grid-3">
+        <section class="panel">
+          <div class="panel-head">
+            <div class="panel-title"><i class="ti ti-alert-triangle"></i>High-Risk Zones</div>
+          </div>
+          <div class="panel-body"><div class="list" id="riskList"></div></div>
+        </section>
+
+        <section class="panel">
+          <div class="panel-head">
+            <div class="panel-title"><i class="ti ti-route-alt-left"></i>Route Recommendations</div>
+          </div>
+          <div class="panel-body"><div class="list" id="routeList"></div></div>
+        </section>
+
+        <section class="panel">
+          <div class="panel-head">
+            <div class="panel-title"><i class="ti ti-cpu"></i>Model Signals</div>
+          </div>
+          <div class="panel-body"><div class="signal-grid" id="signalGrid"></div></div>
+        </section>
+      </section>
+
+      <section class="panel">
+        <div class="panel-head">
+          <div class="panel-title"><i class="ti ti-circuit-board"></i>Traffic Prediction Model</div>
+        </div>
+        <div class="panel-body">
+          <div class="architecture">
+            <div class="model-step"><i class="ti ti-database-import"></i><strong>Data Fusion</strong><span>Historical vehicle counts, speed samples, signal timing, incidents, and weather inputs.</span></div>
+            <div class="model-step"><i class="ti ti-wave-sine"></i><strong>Temporal Learner</strong><span>LSTM-style trend memory captures rush-hour buildup and post-peak dissipation.</span></div>
+            <div class="model-step"><i class="ti ti-binary-tree"></i><strong>Gradient Model</strong><span>Tree-based scoring weighs weather, events, road capacity, and zone sensitivity.</span></div>
+            <div class="model-step"><i class="ti ti-map-route"></i><strong>Route Optimizer</strong><span>Ranks route choices by ETA, distance, congestion exposure, and reliability score.</span></div>
+          </div>
+        </div>
+      </section>
+    </section>
+  </div>
+</main>
+
+<script>
+const zones = [
+  { id: "mpnagar", name: "MP Nagar Junction", baseline: 64, capacity: 3300, x: 52, y: 47, coords: "23.2339,77.4308", history: [42, 51, 68, 82, 71, 58, 76], routes: [
+    ["Ring Road Diversion", "BEST", 18, 6.2, "Avoids signal clusters and market spillover"],
+    ["Habibganj Flyover Link", "ALT", 23, 7.1, "Stable speeds with moderate merging"],
+    ["Main Market Road", "SLOW", 34, 5.0, "Dense intersections and parking friction"]
+  ]},
+  { id: "dbcity", name: "DB City Road", baseline: 58, capacity: 2800, x: 42, y: 58, coords: "23.2320,77.4290", history: [38, 46, 57, 72, 78, 67, 61], routes: [
+    ["Service Lane Bypass", "BEST", 16, 4.8, "Lower mall entry conflict"],
+    ["Board Office Corridor", "ALT", 21, 5.9, "Predictable lights and wider lanes"],
+    ["Mall Front Road", "SLOW", 31, 3.9, "Drop-off queues reduce capacity"]
+  ]},
+  { id: "hamidia", name: "Hamidia Road", baseline: 69, capacity: 3000, x: 62, y: 30, coords: "23.2637,77.4064", history: [54, 63, 75, 84, 79, 66, 70], routes: [
+    ["VIP Road Connector", "BEST", 20, 6.7, "Bypasses hospital-side queueing"],
+    ["Peer Gate Link", "ALT", 25, 5.6, "Moderate load but shorter distance"],
+    ["Old City Spine", "SLOW", 39, 4.4, "Pedestrian crossings and narrow lanes"]
+  ]},
+  { id: "arera", name: "Arera Colony", baseline: 47, capacity: 2400, x: 35, y: 42, coords: "23.2145,77.4347", history: [31, 39, 46, 61, 57, 49, 45], routes: [
+    ["E-8 Internal Road", "BEST", 15, 4.1, "Light residential flow"],
+    ["Shahpura Lake Road", "ALT", 19, 5.3, "Good speed after first junction"],
+    ["Bittan Market Road", "SLOW", 28, 3.7, "Retail traffic slows turns"]
+  ]},
+  { id: "newmarket", name: "New Market", baseline: 62, capacity: 2600, x: 49, y: 72, coords: "23.2384,77.4010", history: [44, 52, 63, 70, 83, 74, 66], routes: [
+    ["Link Road 1", "BEST", 17, 5.2, "Fewer pedestrian crossings"],
+    ["TT Nagar Loop", "ALT", 22, 4.6, "Short but signal-heavy"],
+    ["Market Core Road", "SLOW", 36, 3.2, "Parking search traffic dominates"]
+  ]},
+  { id: "aiims", name: "AIIMS Bhopal Bypass", baseline: 51, capacity: 3200, x: 72, y: 62, coords: "23.2031,77.4567", history: [35, 41, 54, 65, 59, 48, 52], routes: [
+    ["Bypass Express Segment", "BEST", 14, 7.8, "High capacity and fewer signals"],
+    ["Saket Nagar Link", "ALT", 20, 5.8, "Moderate school-hour traffic"],
+    ["Hospital Frontage", "SLOW", 30, 4.5, "Ambulance and visitor queues"]
+  ]}
+];
+
+const weatherImpact = {
+  clear: { label: "Clear", load: 0, speed: 1, risk: 0 },
+  cloudy: { label: "Cloudy", load: 3, speed: .98, risk: 1 },
+  lightRain: { label: "Light rain", load: 9, speed: .9, risk: 8 },
+  heavyRain: { label: "Heavy rain", load: 18, speed: .78, risk: 16 },
+  fog: { label: "Fog", load: 13, speed: .82, risk: 12 },
+  heat: { label: "Extreme heat", load: 6, speed: .92, risk: 5 }
+};
+
+const dayImpact = {
+  weekday: { label: "Weekday", load: 8, risk: 5 },
+  weekend: { label: "Weekend", load: -7, risk: -4 },
+  holiday: { label: "Holiday", load: -12, risk: -8 },
+  festival: { label: "Festival", load: 17, risk: 14 },
+  exam: { label: "Exam season", load: 12, risk: 10 }
+};
+
+const peakCurve = { 6: 4, 8: 22, 10: 5, 13: 0, 16: 10, 18: 24, 21: -10 };
+const intervalCurve = [0, 6, 11, 2, -8];
+let currentPrediction = null;
+let selectedRouteTag = "BEST";
+let freeMap = null;
+let freeMapLayers = [];
+let freeRouteToken = 0;
+
+const zoneSelect = document.getElementById("zoneSelect");
+const sourceSelect = document.getElementById("sourceSelect");
+const destinationSelect = document.getElementById("destinationSelect");
+const timeSelect = document.getElementById("timeSelect");
+const weatherSelect = document.getElementById("weatherSelect");
+const daySelect = document.getElementById("daySelect");
+const incidentRange = document.getElementById("incidentRange");
+const incidentValue = document.getElementById("incidentValue");
+const apiStatus = document.getElementById("apiStatus");
+
+function clamp(value, min, max) {
+  return Math.max(min, Math.min(max, value));
+}
+
+function level(pct) {
+  if (pct >= 82) return { label: "CRITICAL", color: "var(--red)", cls: "severe" };
+  if (pct >= 66) return { label: "HIGH", color: "var(--yellow)", cls: "high" };
+  if (pct >= 42) return { label: "MODERATE", color: "var(--blue)", cls: "" };
+  return { label: "CLEAR", color: "var(--green)", cls: "clear" };
+}
+
+function seedNoise(zone, time, incident) {
+  const text = zone.id + time + incident;
+  let hash = 0;
+  for (let i = 0; i < text.length; i++) hash = ((hash << 5) - hash) + text.charCodeAt(i);
+  return Math.abs(hash % 9) - 4;
+}
+
+function populateZones() {
+  const options = zones.map(z => `<option value="${z.id}">${z.name}</option>`).join("");
+  zoneSelect.innerHTML = options;
+  sourceSelect.innerHTML = options;
+  destinationSelect.innerHTML = options;
+}
+
+function selectedZone() {
+  return zones.find(z => z.id === zoneSelect.value) || zones[0];
+}
+
+function selectedSource() {
+  return zones.find(z => z.id === sourceSelect.value) || zones[1];
+}
+
+function selectedDestination() {
+  return zones.find(z => z.id === destinationSelect.value) || selectedZone();
+}
+
+function latLng(zone) {
+  const [lat, lng] = zone.coords.split(",").map(Number);
+  return { lat, lng };
+}
+
+function predict() {
+  let source = selectedSource();
+  const destination = selectedDestination();
+  if (source.id === destination.id) {
+    source = zones.find(zone => zone.id !== destination.id) || source;
+    sourceSelect.value = source.id;
+  }
+  const zone = destination;
+  zoneSelect.value = destination.id;
+  const hour = Number(timeSelect.value);
+  const weather = weatherImpact[weatherSelect.value];
+  const day = dayImpact[daySelect.value];
+  const incident = Number(incidentRange.value);
+  const feedBoost =
+    (document.getElementById("iotFeed").checked ? 2 : -2) +
+    (document.getElementById("gpsFeed").checked ? 2 : -1) +
+    (document.getElementById("eventFeed").checked ? 10 : 0) +
+    (document.getElementById("signalFeed").checked ? -2 : 4);
+  const historyAvg = Math.round(zone.history.reduce((a, b) => a + b, 0) / zone.history.length);
+  const noise = seedNoise(zone, hour, incident);
+  const base = zone.baseline * .52 + historyAvg * .28 + (peakCurve[hour] || 0) + weather.load + day.load + incident + feedBoost + noise;
+  const current = clamp(Math.round(base), 12, 98);
+  const forecast = intervalCurve.map((shift, index) => {
+    const pct = clamp(Math.round(current + shift + (weather.risk / 5) - index * (hour >= 18 ? 1 : 0)), 10, 99);
+    const vehicles = Math.round(zone.capacity * (.45 + pct / 140));
+    return {
+      label: index === 0 ? "Now" : `+${index * 30} min`,
+      pct,
+      vehicles
+    };
+  });
+  const peak = Math.max(...forecast.map(f => f.pct));
+  const delay = Math.round((current / 100) * 26 + weather.risk / 3 + incident / 5);
+  const confidence = clamp(94 - Math.round(incident / 3) - (document.getElementById("eventFeed").checked ? 5 : 0), 76, 96);
+  const risks = buildRisks(zone, current, weather, day);
+  const routes = buildRoutes(source, destination, current, weather);
+  currentPrediction = { zone, source, destination, hour, weather, day, incident, current, forecast, peak, delay, confidence, risks, routes, historyAvg };
+  render(currentPrediction);
+  updateFreeRoute(currentPrediction);
+  document.dispatchEvent(new CustomEvent("trafficPredictionUpdated", { detail: currentPrediction }));
+}
+
+function buildRisks(activeZone, current, weather, day) {
+  return zones
+    .map((zone, index) => {
+      const proximity = zone.id === activeZone.id ? 14 : Math.max(0, 9 - Math.abs(activeZone.x - zone.x) / 7 - Math.abs(activeZone.y - zone.y) / 9);
+      const pct = clamp(Math.round(zone.baseline + weather.risk + day.risk + proximity + seedNoise(zone, current, index)), 24, 98);
+      const reason = pct >= 82 ? "Capacity breach likely within one signal cycle" :
+        pct >= 66 ? "Peak pressure and slow discharge expected" :
+        pct >= 42 ? "Moderate queue buildup near junction arms" :
+        "Stable movement with minor slowdowns";
+      return { ...zone, pct, reason };
+    })
+    .sort((a, b) => b.pct - a.pct)
+    .slice(0, 4);
+}
+
+function buildRoutes(source, destination, current, weather) {
+  const weatherPenalty = Math.round(weather.risk / 4);
+  const directKm = Math.hypot(destination.x - source.x, destination.y - source.y) / 6;
+  return destination.routes.map(([name, tag, minutes, km, reason], index) => {
+    const exposure = tag === "BEST" ? .16 : tag === "ALT" ? .28 : .55;
+    const routeDistance = Math.max(km, directKm + index * 1.4);
+    const eta = Math.round(minutes + routeDistance * 1.2 + current * exposure + weatherPenalty + index);
+    const reliability = clamp(Math.round(96 - exposure * current - weather.risk), 48, 96);
+    return { name, tag, eta, km: `${routeDistance.toFixed(1)} km`, reason, reliability, path: routePath(source, destination, tag) };
+  }).sort((a, b) => a.eta - b.eta);
+}
+
+function routePath(source, destination, tag) {
+  const mx = (source.x + destination.x) / 2;
+  const my = (source.y + destination.y) / 2;
+  const dx = destination.x - source.x;
+  const dy = destination.y - source.y;
+  const curve = tag === "BEST" ? -10 : tag === "ALT" ? 10 : 20;
+  const spread = tag === "BEST" ? .18 : tag === "ALT" ? -.24 : .34;
+  const cx1 = clamp(source.x + dx * .28 - dy * spread, 6, 94);
+  const cy1 = clamp(source.y + dy * .28 + dx * spread, 8, 92);
+  const cx2 = clamp(mx + curve, 6, 94);
+  const cy2 = clamp(my - curve / 2, 8, 92);
+  const cx3 = clamp(destination.x - dx * .28 + dy * spread, 6, 94);
+  const cy3 = clamp(destination.y - dy * .28 - dx * spread, 8, 92);
+  return `M ${source.x} ${source.y} C ${cx1} ${cy1}, ${cx2} ${cy2}, ${cx3} ${cy3} S ${destination.x} ${destination.y}, ${destination.x} ${destination.y}`;
+}
+
+function setApiStatus(message, state = "") {
+  apiStatus.textContent = message;
+  apiStatus.className = `api-status ${state}`;
+}
+
+function initFreeMap() {
+  if (!window.L) {
+    setApiStatus("Leaflet map library could not load. The prototype map fallback is still available.", "error");
+    return;
+  }
+  if (freeMap) return;
+  freeMap = L.map("freeMap", {
+    zoomControl: true,
+    attributionControl: true
+  }).setView([23.235, 77.42], 12);
+  L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", {
+    maxZoom: 19,
+    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
+  }).addTo(freeMap);
+  document.getElementById("trafficMap").classList.add("free-map-active");
+  setApiStatus("Free interactive map active: OpenStreetMap tiles + OSRM road routing.", "ready");
+}
+
+function clearFreeMapLayers() {
+  if (!freeMap) return;
+  freeMapLayers.forEach(layer => freeMap.removeLayer(layer));
+  freeMapLayers = [];
+}
+
+function addFreeLayer(layer) {
+  if (!freeMap) return;
+  layer.addTo(freeMap);
+  freeMapLayers.push(layer);
+}
+
+function updateFreeMapMarkers(data) {
+  if (!freeMap || !window.L) return;
+  const source = latLng(data.source);
+  const destination = latLng(data.destination);
+  addFreeLayer(L.marker(source).bindPopup(`<b>Source</b><br>${data.source.name}`));
+  addFreeLayer(L.marker(destination).bindPopup(`<b>Destination</b><br>${data.destination.name}`));
+  data.risks.forEach(zone => {
+    const lv = level(zone.pct);
+    const color = lv.cls === "severe" ? "#ff5c70" : lv.cls === "high" ? "#f8c14a" : lv.cls === "clear" ? "#25d695" : "#58a6ff";
+    addFreeLayer(L.circleMarker(latLng(zone), {
+      radius: 8 + zone.pct / 12,
+      color,
+      fillColor: color,
+      fillOpacity: .32,
+      weight: 2
+    }).bindPopup(`<b>${zone.name}</b><br>Congestion risk: ${zone.pct}%<br>${zone.reason}`));
+  });
+}
+
+async function updateFreeRoute(data) {
+  initFreeMap();
+  if (!freeMap || !window.L) return;
+  const token = ++freeRouteToken;
+  clearFreeMapLayers();
+  updateFreeMapMarkers(data);
+  const src = latLng(data.source);
+  const dst = latLng(data.destination);
+  const url = `https://router.project-osrm.org/route/v1/driving/${src.lng},${src.lat};${dst.lng},${dst.lat}?alternatives=true&overview=full&geometries=geojson&steps=false`;
+  try {
+    const res = await fetch(url);
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const routeData = await res.json();
+    if (token !== freeRouteToken) return;
+    if (routeData.code !== "Ok" || !routeData.routes?.length) throw new Error(routeData.code || "No route");
+    const osrmRoutes = routeData.routes.slice(0, 3);
+    data.routes = data.routes.map((route, index) => {
+      const osrmRoute = osrmRoutes[index] || osrmRoutes[0];
+      return {
+        ...route,
+        name: index === 0 ? "OSRM Fastest Route" : `OSRM Alternate ${index + 1}`,
+        eta: Math.round(osrmRoute.duration / 60),
+        km: `${(osrmRoute.distance / 1000).toFixed(1)} km`,
+        reliability: clamp(route.reliability + (index === 0 ? 4 : -2), 48, 98),
+        reason: index === 0 ? "Free OSRM road-network fastest path" : "Free OSRM alternate road path",
+        geojson: osrmRoute.geometry
+      };
+    }).sort((a, b) => a.eta - b.eta);
+    drawFreeRoutes(data);
+    setApiStatus(`Free route active: ${data.source.name} to ${data.destination.name}.`, "ready");
+    renderRoutes(data);
+    renderMap(data);
+    renderAnalysis(data);
+  } catch (error) {
+    if (token !== freeRouteToken) return;
+    drawPrototypeFreeRoute(data);
+    setApiStatus("OSRM route service unavailable. Showing map with prototype route estimates.", "error");
+  }
+}
+
+function drawFreeRoutes(data) {
+  if (!freeMap || !window.L) return;
+  const routeColor = { BEST: "#25d695", ALT: "#58a6ff", SLOW: "#ff5c70" };
+  const bounds = [];
+  data.routes.forEach(route => {
+    if (!route.geojson) return;
+    const latLngs = route.geojson.coordinates.map(([lng, lat]) => {
+      const point = [lat, lng];
+      bounds.push(point);
+      return point;
+    });
+    const active = route.tag === selectedRouteTag;
+    addFreeLayer(L.polyline(latLngs, {
+      color: routeColor[route.tag] || "#32d5e8",
+      weight: active ? 7 : 4,
+      opacity: active ? .95 : .42,
+      dashArray: route.tag === "SLOW" ? "8 8" : null
+    }).bindPopup(`<b>${route.name}</b><br>${route.eta} min ETA<br>${route.km}`));
+  });
+  if (bounds.length) freeMap.fitBounds(bounds, { padding: [34, 34] });
+}
+
+function drawPrototypeFreeRoute(data) {
+  if (!freeMap || !window.L) return;
+  const src = latLng(data.source);
+  const dst = latLng(data.destination);
+  addFreeLayer(L.polyline([src, dst], {
+    color: "#25d695",
+    weight: 6,
+    opacity: .85,
+    dashArray: "10 8"
+  }).bindPopup("Prototype route line"));
+  freeMap.fitBounds([src, dst], { padding: [34, 34] });
+}
+
+function render(data) {
+  renderScore(data);
+  renderTimeline(data);
+  renderCanvas(data);
+  renderMap(data);
+  renderRisks(data);
+  renderRoutes(data);
+  renderSignals(data);
+  renderAnalysis(data);
+}
+
+function renderScore(data) {
+  const lv = level(data.current);
+  const ring = document.getElementById("scoreRing");
+  ring.style.setProperty("--pct", data.current);
+  ring.style.setProperty("--ring", lv.color);
+  document.getElementById("scoreValue").textContent = `${data.current}%`;
+  document.getElementById("scoreLabel").textContent = lv.label;
+  document.getElementById("peakValue").textContent = `${data.peak}%`;
+  document.getElementById("delayValue").textContent = `${data.delay} min`;
+  document.getElementById("vehicleValue").textContent = data.forecast[0].vehicles.toLocaleString("en-IN");
+  document.getElementById("confidenceValue").textContent = `${data.confidence}%`;
+  const mapStatus = document.getElementById("mapStatus");
+  mapStatus.textContent = lv.label;
+  mapStatus.className = `badge ${lv.cls}`;
+}
+
+function renderTimeline(data) {
+  const timeline = document.getElementById("timeline");
+  timeline.innerHTML = data.forecast.map(f => {
+    const lv = level(f.pct);
+    return `<div class="time-row">
+      <span>${f.label}</span>
+      <div class="bar-track"><div class="bar-fill" style="width:${f.pct}%;background:${lv.color}"></div></div>
+      <strong>${f.pct}%</strong>
+      <em>${f.vehicles.toLocaleString("en-IN")} veh</em>
+      <span class="badge ${lv.cls}">${lv.label}</span>
+    </div>`;
+  }).join("");
+}
+
+function renderCanvas(data) {
+  const canvas = document.getElementById("forecastCanvas");
+  const rect = canvas.getBoundingClientRect();
+  const dpr = window.devicePixelRatio || 1;
+  canvas.width = Math.max(320, Math.floor(rect.width * dpr));
+  canvas.height = Math.max(220, Math.floor(rect.height * dpr));
+  const ctx = canvas.getContext("2d");
+  ctx.scale(dpr, dpr);
+  const w = canvas.width / dpr;
+  const h = canvas.height / dpr;
+  ctx.clearRect(0, 0, w, h);
+  const pad = { l: 42, r: 20, t: 20, b: 34 };
+  ctx.strokeStyle = "rgba(255,255,255,.09)";
+  ctx.lineWidth = 1;
+  ctx.font = "11px JetBrains Mono, monospace";
+  ctx.fillStyle = "#91a3bd";
+  for (let i = 0; i <= 4; i++) {
+    const y = pad.t + (h - pad.t - pad.b) * i / 4;
+    ctx.beginPath();
+    ctx.moveTo(pad.l, y);
+    ctx.lineTo(w - pad.r, y);
+    ctx.stroke();
+    ctx.fillText(`${100 - i * 25}%`, 8, y + 4);
+  }
+  const points = data.forecast.map((f, i) => ({
+    x: pad.l + (w - pad.l - pad.r) * i / (data.forecast.length - 1),
+    y: pad.t + (h - pad.t - pad.b) * (100 - f.pct) / 100,
+    ...f
+  }));
+  const gradient = ctx.createLinearGradient(0, pad.t, 0, h - pad.b);
+  gradient.addColorStop(0, "rgba(50,213,232,.35)");
+  gradient.addColorStop(1, "rgba(50,213,232,0)");
+  ctx.beginPath();
+  points.forEach((p, i) => i ? ctx.lineTo(p.x, p.y) : ctx.moveTo(p.x, p.y));
+  ctx.lineTo(points[points.length - 1].x, h - pad.b);
+  ctx.lineTo(points[0].x, h - pad.b);
+  ctx.closePath();
+  ctx.fillStyle = gradient;
+  ctx.fill();
+  ctx.beginPath();
+  points.forEach((p, i) => i ? ctx.lineTo(p.x, p.y) : ctx.moveTo(p.x, p.y));
+  ctx.strokeStyle = "#32d5e8";
+  ctx.lineWidth = 3;
+  ctx.stroke();
+  points.forEach(p => {
+    const lv = level(p.pct);
+    ctx.beginPath();
+    ctx.arc(p.x, p.y, 6, 0, Math.PI * 2);
+    ctx.fillStyle = lv.color.replace("var(--green)", "#25d695").replace("var(--blue)", "#58a6ff").replace("var(--yellow)", "#f8c14a").replace("var(--red)", "#ff5c70");
+    ctx.fill();
+    ctx.fillStyle = "#91a3bd";
+    ctx.fillText(p.label, p.x - 17, h - 10);
+  });
+}
+
+function renderMap(data) {
+  const map = document.getElementById("trafficMap");
+  const routeColor = { BEST: "var(--green)", ALT: "var(--blue)", SLOW: "var(--red)" };
+  const sourceMarker = document.getElementById("sourceMarker");
+  const destinationMarker = document.getElementById("destinationMarker");
+  const activeRoute = data.routes.find(route => route.tag === selectedRouteTag) || data.routes[0];
+  sourceMarker.style.left = `calc(${data.source.x}% - 21px)`;
+  sourceMarker.style.top = `calc(${data.source.y}% - 21px)`;
+  sourceMarker.title = `Source: ${data.source.name}`;
+  destinationMarker.style.left = `calc(${data.destination.x}% - 21px)`;
+  destinationMarker.style.top = `calc(${data.destination.y}% - 21px)`;
+  destinationMarker.title = `Destination: ${data.destination.name}`;
+  document.getElementById("mapRoutes").innerHTML = data.routes.map(route =>
+    `<path class="${route.tag === activeRoute.tag ? "active" : ""}" d="${route.path}" stroke="${routeColor[route.tag]}" stroke-width="${route.tag === activeRoute.tag ? 3.8 : 2.2}" stroke-dasharray="${route.tag === "SLOW" ? "5 4" : ""}"></path>`
+  ).join("");
+  document.getElementById("tripCard").innerHTML = `
+    <span>Source to destination</span>
+    <strong>${data.source.name} to ${data.destination.name}</strong>
+    <small>${activeRoute.name}: ${activeRoute.eta} min, ${activeRoute.km}, ${activeRoute.reliability}% reliable</small>
+  `;
+  map.querySelectorAll(".zone-node").forEach(node => node.remove());
+  data.risks.forEach(zone => {
+    const lv = level(zone.pct);
+    const node = document.createElement("button");
+    node.type = "button";
+    node.className = `zone-node ${zone.id === data.zone.id ? "active" : ""}`;
+    node.style.left = `calc(${zone.x}% - 23px)`;
+    node.style.top = `calc(${zone.y}% - 23px)`;
+    node.style.background = lv.color;
+    node.title = `${zone.name}: ${zone.pct}% ${lv.label}`;
+    node.innerHTML = `${zone.pct}<span class="node-label">${zone.name}</span>`;
+    node.addEventListener("click", () => {
+      zoneSelect.value = zone.id;
+      predict();
+    });
+    map.appendChild(node);
+  });
+}
+
+function renderRisks(data) {
+  const list = document.getElementById("riskList");
+  list.innerHTML = data.risks.map((risk, index) => {
+    const lv = level(risk.pct);
+    return `<article class="risk-item">
+      <div class="risk-top"><strong>#${index + 1} ${risk.name}</strong><span class="badge ${lv.cls}">${risk.pct}%</span></div>
+      <p>${risk.reason}. Suggested response: ${risk.pct >= 82 ? "deploy signal priority and divert inbound traffic" : risk.pct >= 66 ? "monitor queues and promote alternate corridors" : "continue observation"}.</p>
+    </article>`;
+  }).join("");
+}
+
+function openStreetMapUrl(zone) {
+  const source = currentPrediction?.source || zones[0];
+  const [sourceLat, sourceLng] = source.coords.split(",");
+  const [destLat, destLng] = zone.coords.split(",");
+  return `https://www.openstreetmap.org/directions?engine=fossgis_osrm_car&route=${sourceLat}%2C${sourceLng}%3B${destLat}%2C${destLng}`;
+}
+
+function renderRoutes(data) {
+  const list = document.getElementById("routeList");
+  list.innerHTML = data.routes.map(route => {
+    const cls = route.tag === "BEST" ? "clear" : route.tag === "SLOW" ? "severe" : "";
+    const selected = route.tag === selectedRouteTag ? " selected" : "";
+    return `<article class="route-item${selected}" data-route-tag="${route.tag}" tabindex="0" role="button" aria-label="Show ${route.name} on map">
+      <div class="route-top"><strong>${route.name}</strong><span class="badge ${cls}">${route.tag}</span></div>
+      <div class="route-meta"><span>${route.eta} min ETA</span><span>${route.km}</span><span>${route.reliability}% reliability</span></div>
+      <p>${route.reason}.</p>
+      <a class="map-link" href="${openStreetMapUrl(data.zone)}" target="_blank" rel="noopener">Open route in OpenStreetMap</a>
+    </article>`;
+  }).join("");
+  list.querySelectorAll(".route-item").forEach(item => {
+    item.addEventListener("click", event => {
+      if (event.target.closest("a")) return;
+      selectedRouteTag = item.dataset.routeTag;
+      if (freeMap) {
+        clearFreeMapLayers();
+        updateFreeMapMarkers(data);
+        drawFreeRoutes(data);
+      }
+      renderMap(data);
+      renderRoutes(data);
+    });
+    item.addEventListener("keydown", event => {
+      if (event.key !== "Enter" && event.key !== " ") return;
+      event.preventDefault();
+      selectedRouteTag = item.dataset.routeTag;
+      if (freeMap) {
+        clearFreeMapLayers();
+        updateFreeMapMarkers(data);
+        drawFreeRoutes(data);
+      }
+      renderMap(data);
+      renderRoutes(data);
+    });
+  });
+}
+
+function renderSignals(data) {
+  const signals = [
+    ["Historical avg", `${data.historyAvg}%`],
+    ["Weather factor", data.weather.label],
+    ["Peak-hour lift", `${peakCurve[data.hour] || 0}%`],
+    ["Incident load", `${data.incident}%`],
+    ["Road capacity", `${data.zone.capacity.toLocaleString("en-IN")}/hr`],
+    ["Forecast window", "120 min"],
+    ["Model type", "LSTM + XGBoost"],
+    ["Update cycle", "30 sec"],
+    ["Map data", freeMap ? "OpenStreetMap" : "Prototype"]
+  ];
+  document.getElementById("signalGrid").innerHTML = signals.map(([label, value]) =>
+    `<div class="signal"><span>${label}</span><strong>${value}</strong></div>`
+  ).join("");
+}
+
+function renderAnalysis(data) {
+  const best = data.routes.find(route => route.tag === selectedRouteTag) || data.routes[0];
+  const worstRisk = data.risks[0];
+  const nextBest = data.forecast.reduce((bestPoint, item) => item.pct < bestPoint.pct ? item : bestPoint, data.forecast[0]);
+  const lv = level(data.current);
+  document.getElementById("analysisText").innerHTML = `
+    <div>The model classifies <strong>${data.zone.name}</strong> as <strong>${lv.label}</strong> with ${data.current}% congestion and an expected peak of ${data.peak}% inside the next two hours.</div>
+    <div>Historical records for this corridor average ${data.historyAvg}%, while ${data.weather.label.toLowerCase()} conditions and the ${data.day.label.toLowerCase()} pattern are adding measurable delay pressure.</div>
+    <div>The safest travel window is <strong>${nextBest.label}</strong>, when the forecast falls to ${nextBest.pct}%. The highest-risk nearby zone is <strong>${worstRisk.name}</strong> at ${worstRisk.pct}%.</div>
+    <div>Displayed trip path: <strong>${data.source.name}</strong> to <strong>${data.destination.name}</strong>. Recommended route: <strong>${best.name}</strong>, with an estimated ${best.eta} minute trip and ${best.reliability}% reliability.</div>
+  `;
+}
+
+function mountReactControls() {
+  const mount = document.getElementById("reactControlPanel");
+  if (!mount || !window.React || !window.ReactDOM) return;
+  const h = React.createElement;
+
+  function ReactTrafficPanel() {
+    const [state, setState] = React.useState(() => ({
+      source: selectedSource().name,
+      destination: selectedDestination().name,
+      scenario: "Live Inputs",
+      congestion: currentPrediction?.current || 0
+    }));
+
+    React.useEffect(() => {
+      const sync = event => {
+        const data = event.detail || currentPrediction;
+        if (!data) return;
+        setState(prev => ({
+          ...prev,
+          source: data.source.name,
+          destination: data.destination.name,
+          congestion: data.current
+        }));
+      };
+      document.addEventListener("trafficPredictionUpdated", sync);
+      sync({ detail: currentPrediction });
+      return () => document.removeEventListener("trafficPredictionUpdated", sync);
+    }, []);
+
+    const runScenario = scenario => {
+      setState(prev => ({ ...prev, scenario: scenario.label }));
+      if (scenario.weather) weatherSelect.value = scenario.weather;
+      if (scenario.day) daySelect.value = scenario.day;
+      if (scenario.time) timeSelect.value = scenario.time;
+      if (Number.isFinite(scenario.incident)) {
+        incidentRange.value = String(scenario.incident);
+        incidentValue.textContent = `${scenario.incident}%`;
+      }
+      if (typeof scenario.eventFeed === "boolean") document.getElementById("eventFeed").checked = scenario.eventFeed;
+      predict();
+    };
+
+    const swapTrip = () => {
+      const oldSource = sourceSelect.value;
+      sourceSelect.value = destinationSelect.value;
+      destinationSelect.value = oldSource;
+      zoneSelect.value = destinationSelect.value;
+      selectedRouteTag = "BEST";
+      setState(prev => ({ ...prev, scenario: "Swapped Trip" }));
+      predict();
+    };
+
+    const scenarios = [
+      { label: "Rush + Rain", weather: "heavyRain", day: "weekday", time: "18", incident: 18, eventFeed: false },
+      { label: "Festival Surge", weather: "clear", day: "festival", time: "18", incident: 22, eventFeed: true },
+      { label: "Clear Flow", weather: "clear", day: "weekend", time: "10", incident: 2, eventFeed: false }
+    ];
+
+    return h("section", { className: "react-panel", "aria-label": "React interactive controls" },
+      h("div", { className: "react-panel-head" },
+        h("div", { className: "react-panel-title" }, h("i", { className: "ti ti-brand-react" }), "React Controls"),
+        h("span", { className: "react-chip" }, `${state.congestion}% LOAD`)
+      ),
+      h("div", { className: "react-trip" },
+        h("span", null, state.scenario),
+        h("strong", null, `${state.source} to ${state.destination}`)
+      ),
+      h("div", { className: "react-actions" },
+        h("button", { className: "react-action primary", type: "button", onClick: swapTrip }, "Swap Trip"),
+        scenarios.map(scenario =>
+          h("button", {
+            key: scenario.label,
+            className: "react-action",
+            type: "button",
+            onClick: () => runScenario(scenario)
+          }, scenario.label)
+        )
+      ),
+      h("div", { className: "react-note" }, "This panel is rendered by React and updates the map, route engine, forecast, and risk cards.")
+    );
+  }
+
+  ReactDOM.createRoot(mount).render(h(ReactTrafficPanel));
+}
+
+function resetInputs() {
+  zoneSelect.value = "mpnagar";
+  sourceSelect.value = "arera";
+  destinationSelect.value = "mpnagar";
+  selectedRouteTag = "BEST";
+  timeSelect.value = "8";
+  weatherSelect.value = "clear";
+  daySelect.value = "weekday";
+  incidentRange.value = "8";
+  document.getElementById("iotFeed").checked = true;
+  document.getElementById("gpsFeed").checked = true;
+  document.getElementById("eventFeed").checked = false;
+  document.getElementById("signalFeed").checked = true;
+  incidentValue.textContent = "8%";
+  predict();
+}
+
+populateZones();
+incidentRange.addEventListener("input", () => incidentValue.textContent = `${incidentRange.value}%`);
+document.getElementById("predictBtn").addEventListener("click", predict);
+document.getElementById("resetBtn").addEventListener("click", resetInputs);
+zoneSelect.addEventListener("change", () => {
+  destinationSelect.value = zoneSelect.value;
+  selectedRouteTag = "BEST";
+  predict();
+});
+destinationSelect.addEventListener("change", () => {
+  zoneSelect.value = destinationSelect.value;
+  selectedRouteTag = "BEST";
+  predict();
+});
+sourceSelect.addEventListener("change", () => {
+  if (sourceSelect.value === destinationSelect.value) {
+    const fallback = zones.find(zone => zone.id !== destinationSelect.value);
+    sourceSelect.value = fallback.id;
+  }
+  selectedRouteTag = "BEST";
+  predict();
+});
+[timeSelect, weatherSelect, daySelect].forEach(el => el.addEventListener("change", predict));
+["iotFeed", "gpsFeed", "eventFeed", "signalFeed"].forEach(id => document.getElementById(id).addEventListener("change", predict));
+window.addEventListener("resize", () => currentPrediction && renderCanvas(currentPrediction));
+mountReactControls();
+resetInputs();
+</script>
+</body>
+</html>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AI-Based Smart Traffic Congestion Prediction System</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/tabler-icons.min.css">
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+<script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+<style>
+:root {
+  --bg: #08111f;
+  --panel: #101c2f;
+  --panel-2: #14243b;
+  --panel-3: #192e4a;
+  --line: rgba(255,255,255,.1);
+  --line-2: rgba(255,255,255,.18);
+  --text: #edf4ff;
+  --muted: #91a3bd;
+  --green: #25d695;
+  --blue: #58a6ff;
+  --yellow: #f8c14a;
+  --red: #ff5c70;
+  --violet: #a889ff;
+  --cyan: #32d5e8;
+  --shadow: 0 18px 45px rgba(0,0,0,.25);
+  --mono: "JetBrains Mono", monospace;
+  --sans: "Inter", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+}
+
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+body {
+  margin: 0;
+  min-height: 100vh;
+  background:
+    radial-gradient(circle at top left, rgba(50,213,232,.12), transparent 36rem),
+    linear-gradient(135deg, #08111f 0%, #0b1526 52%, #101523 100%);
+  color: var(--text);
+  font-family: var(--sans);
+}
+button, select, input { font: inherit; }
+
+.topbar {
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: .95rem clamp(1rem, 3vw, 2rem);
+  background: rgba(8,17,31,.86);
+  border-bottom: 1px solid var(--line);
+  backdrop-filter: blur(16px);
+}
+.brand {
+  display: flex;
+  align-items: center;
+  gap: .8rem;
+  min-width: 0;
+}
+.brand-mark {
+  width: 42px;
+  height: 42px;
+  display: grid;
+  place-items: center;
+  border-radius: 8px;
+  color: var(--green);
+  background: rgba(37,214,149,.13);
+  border: 1px solid rgba(37,214,149,.35);
+}
+.brand-title {
+  font-size: 1rem;
+  font-weight: 800;
+  letter-spacing: 0;
+  white-space: nowrap;
+}
+.brand-sub {
+  margin-top: .1rem;
+  color: var(--muted);
+  font-family: var(--mono);
+  font-size: .72rem;
+}
+.live-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: .45rem;
+  color: var(--green);
+  font-family: var(--mono);
+  font-size: .75rem;
+}
+.live-dot {
+  width: .55rem;
+  height: .55rem;
+  border-radius: 999px;
+  background: var(--green);
+  box-shadow: 0 0 0 .35rem rgba(37,214,149,.12);
+}
+
+.shell {
+  width: min(1400px, 100%);
+  margin: 0 auto;
+  padding: 1.25rem clamp(1rem, 3vw, 2rem) 2rem;
+}
+.layout {
+  display: grid;
+  grid-template-columns: minmax(290px, 360px) minmax(0, 1fr);
+  gap: 1rem;
+  align-items: start;
+}
+.panel {
+  background: rgba(16,28,47,.92);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  box-shadow: var(--shadow);
+}
+.sidebar {
+  position: sticky;
+  top: 5.25rem;
+  overflow: hidden;
+}
+.panel-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 1rem 1rem .85rem;
+  border-bottom: 1px solid var(--line);
+}
+.panel-title {
+  display: flex;
+  align-items: center;
+  gap: .55rem;
+  font-size: .92rem;
+  font-weight: 800;
+}
+.panel-title i { color: var(--cyan); }
+.panel-body { padding: 1rem; }
+.control-grid {
+  display: grid;
+  gap: .85rem;
+}
+.field label {
+  display: block;
+  margin-bottom: .35rem;
+  color: var(--muted);
+  font-family: var(--mono);
+  font-size: .7rem;
+  text-transform: uppercase;
+}
+.field select,
+.field input[type="text"],
+.field input[type="range"] {
+  width: 100%;
+}
+.field select,
+.field input[type="text"] {
+  min-height: 42px;
+  padding: 0 .8rem;
+  color: var(--text);
+  background: var(--panel-2);
+  border: 1px solid var(--line-2);
+  border-radius: 8px;
+  outline: none;
+}
+.field input[type="text"]::placeholder { color: #60728e; }
+.field select:focus,
+.field input[type="text"]:focus { border-color: var(--cyan); }
+.range-row {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: .75rem;
+  align-items: center;
+}
+.range-value {
+  min-width: 3rem;
+  text-align: right;
+  color: var(--cyan);
+  font-family: var(--mono);
+  font-size: .82rem;
+}
+input[type="range"] { accent-color: var(--cyan); }
+.toggles {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: .55rem;
+}
+.toggle {
+  display: flex;
+  align-items: center;
+  gap: .5rem;
+  min-height: 38px;
+  padding: .45rem .55rem;
+  color: var(--muted);
+  background: var(--panel-2);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  font-size: .82rem;
+  cursor: pointer;
+}
+.toggle input { accent-color: var(--green); }
+.action-row {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: .65rem;
+  margin-top: 1rem;
+}
+.api-status {
+  margin-top: .4rem;
+  color: var(--muted);
+  font-size: .72rem;
+  line-height: 1.4;
+}
+.api-status.ready { color: var(--green); }
+.api-status.error { color: var(--red); }
+.react-panel {
+  margin-top: 1rem;
+  padding: .85rem;
+  background: linear-gradient(135deg, rgba(88,166,255,.12), rgba(37,214,149,.09));
+  border: 1px solid rgba(88,166,255,.24);
+  border-radius: 8px;
+}
+.react-panel-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: .7rem;
+  margin-bottom: .75rem;
+}
+.react-panel-title {
+  display: flex;
+  align-items: center;
+  gap: .45rem;
+  font-size: .84rem;
+  font-weight: 800;
+}
+.react-panel-title i { color: var(--cyan); }
+.react-chip {
+  padding: .18rem .45rem;
+  border-radius: 999px;
+  background: rgba(37,214,149,.13);
+  color: var(--green);
+  font-family: var(--mono);
+  font-size: .62rem;
+  font-weight: 800;
+}
+.react-trip {
+  display: grid;
+  gap: .35rem;
+  margin-bottom: .75rem;
+}
+.react-trip span {
+  color: var(--muted);
+  font-family: var(--mono);
+  font-size: .64rem;
+  text-transform: uppercase;
+}
+.react-trip strong {
+  font-size: .88rem;
+  line-height: 1.35;
+}
+.react-actions {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: .5rem;
+}
+.react-action {
+  min-height: 36px;
+  padding: 0 .55rem;
+  color: var(--text);
+  background: rgba(20,36,59,.82);
+  border: 1px solid var(--line-2);
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: .75rem;
+  font-weight: 700;
+}
+.react-action:hover {
+  border-color: rgba(50,213,232,.6);
+  color: var(--cyan);
+}
+.react-action.primary {
+  color: #06111e;
+  background: var(--cyan);
+  border-color: transparent;
+}
+.react-note {
+  margin-top: .7rem;
+  color: var(--muted);
+  font-size: .72rem;
+  line-height: 1.45;
+}
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: .45rem;
+  min-height: 42px;
+  padding: 0 .85rem;
+  color: #05101d;
+  background: var(--green);
+  border: 0;
+  border-radius: 8px;
+  font-weight: 800;
+  cursor: pointer;
+}
+.btn.secondary {
+  width: 42px;
+  padding: 0;
+  color: var(--text);
+  background: var(--panel-3);
+  border: 1px solid var(--line-2);
+}
+.btn:hover { filter: brightness(1.06); }
+
+.main {
+  display: grid;
+  gap: 1rem;
+}
+.hero {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(290px, 420px);
+  gap: 1rem;
+  align-items: stretch;
+}
+.system-card {
+  padding: clamp(1.15rem, 2vw, 1.6rem);
+  overflow: hidden;
+}
+.eyebrow {
+  display: inline-flex;
+  gap: .4rem;
+  align-items: center;
+  color: var(--cyan);
+  font-family: var(--mono);
+  font-size: .73rem;
+  text-transform: uppercase;
+}
+h1 {
+  margin: .65rem 0 .75rem;
+  max-width: 780px;
+  font-size: clamp(1.9rem, 4vw, 3.6rem);
+  line-height: 1.02;
+  letter-spacing: 0;
+}
+.lead {
+  max-width: 780px;
+  margin: 0;
+  color: #c6d5ea;
+  font-size: 1rem;
+  line-height: 1.65;
+}
+.feature-strip {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: .7rem;
+  margin-top: 1.25rem;
+}
+.feature {
+  padding: .8rem;
+  background: rgba(20,36,59,.8);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+}
+.feature i { color: var(--cyan); }
+.feature strong {
+  display: block;
+  margin-top: .35rem;
+  font-size: .85rem;
+}
+.feature span {
+  display: block;
+  margin-top: .2rem;
+  color: var(--muted);
+  font-size: .78rem;
+  line-height: 1.45;
+}
+
+.score-card {
+  display: grid;
+  align-content: space-between;
+  min-height: 100%;
+  padding: 1rem;
+}
+.score-ring {
+  --pct: 0;
+  width: min(220px, 62vw);
+  aspect-ratio: 1;
+  margin: .35rem auto 1rem;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background:
+    radial-gradient(circle closest-side, var(--panel) 72%, transparent 73%),
+    conic-gradient(var(--ring, var(--green)) calc(var(--pct) * 1%), rgba(255,255,255,.08) 0);
+}
+.score-ring strong {
+  display: block;
+  font-family: var(--mono);
+  font-size: 3rem;
+  line-height: 1;
+  text-align: center;
+}
+.score-ring span {
+  display: block;
+  margin-top: .3rem;
+  color: var(--muted);
+  font-family: var(--mono);
+  font-size: .72rem;
+  text-align: center;
+}
+.score-meta {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: .6rem;
+}
+.mini-stat {
+  padding: .75rem;
+  background: var(--panel-2);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+}
+.mini-stat span {
+  display: block;
+  color: var(--muted);
+  font-family: var(--mono);
+  font-size: .68rem;
+}
+.mini-stat strong {
+  display: block;
+  margin-top: .25rem;
+  font-family: var(--mono);
+  font-size: 1.05rem;
+}
+
+.grid-2 {
+  display: grid;
+  grid-template-columns: minmax(0, 1.08fr) minmax(330px, .92fr);
+  gap: 1rem;
+}
+.grid-3 {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1rem;
+}
+
+.timeline {
+  display: grid;
+  gap: .65rem;
+}
+.time-row {
+  display: grid;
+  grid-template-columns: 5rem minmax(0, 1fr) 4rem 5.2rem 5.6rem;
+  gap: .65rem;
+  align-items: center;
+  min-height: 42px;
+  padding: .55rem .65rem;
+  background: var(--panel-2);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+}
+.time-row span:first-child,
+.time-row strong,
+.time-row em {
+  font-family: var(--mono);
+  font-size: .78rem;
+  font-style: normal;
+}
+.bar-track {
+  height: .55rem;
+  overflow: hidden;
+  background: rgba(255,255,255,.08);
+  border-radius: 99px;
+}
+.bar-fill {
+  width: 0;
+  height: 100%;
+  border-radius: inherit;
+  background: var(--green);
+  transition: width .7s ease;
+}
+.badge {
+  justify-self: end;
+  padding: .22rem .45rem;
+  border-radius: 999px;
+  background: rgba(88,166,255,.14);
+  color: var(--blue);
+  font-family: var(--mono);
+  font-size: .65rem;
+  font-weight: 800;
+}
+.badge.high { color: var(--yellow); background: rgba(248,193,74,.14); }
+.badge.severe { color: var(--red); background: rgba(255,92,112,.14); }
+.badge.clear { color: var(--green); background: rgba(37,214,149,.14); }
+
+.chart-wrap {
+  height: 260px;
+  padding: .5rem;
+  background: var(--panel-2);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+}
+#forecastCanvas {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+.map-card .panel-body { padding: 0; }
+.traffic-map {
+  position: relative;
+  min-height: 430px;
+  overflow: hidden;
+  border-radius: 0 0 8px 8px;
+  background:
+    linear-gradient(90deg, rgba(255,255,255,.04) 1px, transparent 1px),
+    linear-gradient(rgba(255,255,255,.04) 1px, transparent 1px),
+    #0d1b2d;
+  background-size: 42px 42px;
+}
+.free-map {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  min-height: 100%;
+}
+.traffic-map.free-map-active {
+  background: #0d1b2d;
+}
+.traffic-map.free-map-active::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  pointer-events: none;
+  background: linear-gradient(180deg, rgba(8,17,31,.08), rgba(8,17,31,.38));
+}
+.leaflet-container {
+  width: 100%;
+  height: 100%;
+  min-height: 430px;
+  background: #0d1b2d;
+  color: #172033;
+}
+.leaflet-control-attribution {
+  font-size: 10px;
+}
+.traffic-map.free-map-active .map-routes,
+.traffic-map.free-map-active .route-line,
+.traffic-map.free-map-active .journey-marker,
+.traffic-map.free-map-active .zone-node {
+  display: none;
+}
+.map-routes {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+}
+.map-routes path {
+  fill: none;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  opacity: .42;
+}
+.map-routes path.active {
+  opacity: .95;
+  filter: drop-shadow(0 0 10px rgba(50,213,232,.35));
+}
+.route-line {
+  position: absolute;
+  z-index: 2;
+  height: 8px;
+  border-radius: 99px;
+  transform-origin: left center;
+  opacity: .9;
+}
+.route-line.best { background: var(--green); }
+.route-line.alt { background: var(--blue); }
+.route-line.slow { background: var(--red); }
+.road-a { width: 74%; left: 12%; top: 48%; transform: rotate(-8deg); }
+.road-b { width: 64%; left: 22%; top: 25%; transform: rotate(21deg); }
+.road-c { width: 58%; left: 20%; top: 70%; transform: rotate(15deg); }
+.zone-node {
+  position: absolute;
+  width: 46px;
+  height: 46px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  color: #06111e;
+  font-family: var(--mono);
+  font-size: .72rem;
+  font-weight: 900;
+  border: 3px solid rgba(255,255,255,.8);
+  box-shadow: 0 0 0 .45rem rgba(255,255,255,.08), 0 12px 30px rgba(0,0,0,.35);
+  cursor: pointer;
+}
+.zone-node.active { outline: 3px solid var(--cyan); outline-offset: 4px; }
+.journey-marker {
+  position: absolute;
+  z-index: 4;
+  display: grid;
+  place-items: center;
+  width: 42px;
+  height: 42px;
+  border: 2px solid rgba(255,255,255,.85);
+  border-radius: 50%;
+  color: #06111e;
+  box-shadow: 0 12px 28px rgba(0,0,0,.36);
+}
+.journey-marker.source { background: var(--green); }
+.journey-marker.destination { background: var(--red); }
+.journey-marker i { font-size: 1.2rem; }
+.node-label {
+  position: absolute;
+  left: 50%;
+  top: calc(100% + .35rem);
+  transform: translateX(-50%);
+  min-width: 8rem;
+  color: var(--text);
+  text-align: center;
+  font-family: var(--mono);
+  font-size: .68rem;
+  text-shadow: 0 1px 3px #000;
+}
+.map-legend {
+  position: absolute;
+  right: .8rem;
+  bottom: .8rem;
+  display: grid;
+  gap: .4rem;
+  padding: .7rem;
+  background: rgba(8,17,31,.82);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  backdrop-filter: blur(10px);
+}
+.trip-card {
+  position: absolute;
+  left: .8rem;
+  bottom: .8rem;
+  z-index: 5;
+  width: min(330px, calc(100% - 1.6rem));
+  padding: .78rem;
+  background: rgba(8,17,31,.84);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  backdrop-filter: blur(10px);
+}
+.trip-card span {
+  display: block;
+  color: var(--muted);
+  font-family: var(--mono);
+  font-size: .66rem;
+  text-transform: uppercase;
+}
+.trip-card strong {
+  display: block;
+  margin-top: .24rem;
+  font-size: .86rem;
+  line-height: 1.35;
+}
+.trip-card small {
+  display: block;
+  margin-top: .45rem;
+  color: var(--cyan);
+  font-family: var(--mono);
+}
+.legend-item {
+  display: flex;
+  align-items: center;
+  gap: .45rem;
+  color: var(--muted);
+  font-size: .73rem;
+}
+.legend-swatch {
+  width: 1.1rem;
+  height: .45rem;
+  border-radius: 99px;
+}
+
+.list {
+  display: grid;
+  gap: .65rem;
+}
+.risk-item,
+.route-item {
+  display: grid;
+  gap: .35rem;
+  padding: .8rem;
+  background: var(--panel-2);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+}
+.route-item {
+  cursor: pointer;
+}
+.route-item.selected {
+  border-color: rgba(50,213,232,.55);
+  box-shadow: inset 0 0 0 1px rgba(50,213,232,.18);
+}
+.risk-top,
+.route-top {
+  display: flex;
+  justify-content: space-between;
+  gap: .8rem;
+  align-items: center;
+}
+.risk-top strong,
+.route-top strong { font-size: .9rem; }
+.risk-item p,
+.route-item p {
+  margin: 0;
+  color: var(--muted);
+  font-size: .8rem;
+  line-height: 1.45;
+}
+.route-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: .7rem;
+  color: var(--muted);
+  font-family: var(--mono);
+  font-size: .72rem;
+}
+.map-link {
+  color: var(--cyan);
+  text-decoration: none;
+  font-family: var(--mono);
+  font-size: .72rem;
+}
+
+.analysis {
+  display: grid;
+  gap: .7rem;
+  color: #d4e3f7;
+  line-height: 1.65;
+  font-size: .92rem;
+}
+.signal-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: .7rem;
+}
+.signal {
+  padding: .8rem;
+  background: var(--panel-2);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+}
+.signal span {
+  display: block;
+  color: var(--muted);
+  font-family: var(--mono);
+  font-size: .67rem;
+  text-transform: uppercase;
+}
+.signal strong {
+  display: block;
+  margin-top: .25rem;
+  font-size: .95rem;
+}
+.architecture {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: .7rem;
+}
+.model-step {
+  padding: .85rem;
+  background: var(--panel-2);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+}
+.model-step i { color: var(--violet); }
+.model-step strong {
+  display: block;
+  margin: .45rem 0 .25rem;
+  font-size: .85rem;
+}
+.model-step span {
+  color: var(--muted);
+  font-size: .76rem;
+  line-height: 1.45;
+}
+
+@media (max-width: 1100px) {
+  .layout,
+  .hero,
+  .grid-2 { grid-template-columns: 1fr; }
+  .sidebar { position: static; }
+}
+@media (max-width: 760px) {
+  .topbar { align-items: flex-start; }
+  .brand-title { white-space: normal; }
+  .feature-strip,
+  .grid-3,
+  .signal-grid,
+  .architecture { grid-template-columns: 1fr; }
+  .time-row { grid-template-columns: 4.2rem 1fr 3.4rem 5.6rem; }
+  .time-row em { display: none; }
+  .toggles,
+  .score-meta { grid-template-columns: 1fr; }
+  .traffic-map { min-height: 360px; }
+}
+</style>
+</head>
+<body>
+<header class="topbar">
+  <div class="brand">
+    <div class="brand-mark"><i class="ti ti-traffic-lights"></i></div>
+    <div>
+      <div class="brand-title">AI-Based Smart Traffic Congestion Prediction System</div>
+      <div class="brand-sub">Historical records + weather + peak-hour patterns</div>
+    </div>
+  </div>
+  <div class="live-pill"><span class="live-dot"></span><span>MODEL ACTIVE</span></div>
+</header>
+
+<main class="shell">
+  <div class="layout">
+    <aside class="panel sidebar">
+      <div class="panel-head">
+        <div class="panel-title"><i class="ti ti-adjustments-horizontal"></i>Prediction Inputs</div>
+      </div>
+      <div class="panel-body">
+        <div class="control-grid">
+          <div class="field">
+            <label for="zoneSelect">Monitored Corridor</label>
+            <select id="zoneSelect"></select>
+          </div>
+          <div class="field">
+            <label for="sourceSelect">Route Source</label>
+            <select id="sourceSelect"></select>
+          </div>
+          <div class="field">
+            <label for="destinationSelect">Final Destination</label>
+            <select id="destinationSelect"></select>
+          </div>
+          <div class="field">
+            <label for="timeSelect">Forecast Start</label>
+            <select id="timeSelect">
+              <option value="6">06:00 Early commute</option>
+              <option value="8" selected>08:00 Morning peak</option>
+              <option value="10">10:00 Late morning</option>
+              <option value="13">13:00 Midday</option>
+              <option value="16">16:00 School dispersal</option>
+              <option value="18">18:00 Evening peak</option>
+              <option value="21">21:00 Night</option>
+            </select>
+          </div>
+          <div class="field">
+            <label for="weatherSelect">Weather Conditions</label>
+            <select id="weatherSelect">
+              <option value="clear">Clear and dry</option>
+              <option value="cloudy">Cloudy</option>
+              <option value="lightRain">Light rain</option>
+              <option value="heavyRain">Heavy monsoon rain</option>
+              <option value="fog">Foggy morning</option>
+              <option value="heat">Extreme heat</option>
+            </select>
+          </div>
+          <div class="field">
+            <label for="daySelect">Day Pattern</label>
+            <select id="daySelect">
+              <option value="weekday" selected>Weekday</option>
+              <option value="weekend">Weekend</option>
+              <option value="holiday">Public holiday</option>
+              <option value="festival">Festival day</option>
+              <option value="exam">Exam season</option>
+            </select>
+          </div>
+          <div class="field">
+            <label for="incidentRange">Incident Load</label>
+            <div class="range-row">
+              <input id="incidentRange" type="range" min="0" max="30" value="8">
+              <span class="range-value" id="incidentValue">8%</span>
+            </div>
+          </div>
+          <div class="field">
+            <label>Real-Time Feeds</label>
+            <div class="toggles">
+              <label class="toggle"><input id="iotFeed" type="checkbox" checked>IoT sensors</label>
+              <label class="toggle"><input id="gpsFeed" type="checkbox" checked>GPS speed</label>
+              <label class="toggle"><input id="eventFeed" type="checkbox">Event alert</label>
+              <label class="toggle"><input id="signalFeed" type="checkbox" checked>Signals</label>
+            </div>
+          </div>
+          <div class="api-status" id="apiStatus">Free map mode: OpenStreetMap tiles + OSRM routing, no API key needed.</div>
+        </div>
+        <div class="action-row">
+          <button class="btn" id="predictBtn"><i class="ti ti-sparkles"></i>Predict Congestion</button>
+          <button class="btn secondary" id="resetBtn" title="Reset inputs"><i class="ti ti-refresh"></i></button>
+        </div>
+        <div id="reactControlPanel"></div>
+      </div>
+    </aside>
+
+    <section class="main">
+      <div class="hero">
+        <section class="panel system-card">
+          <div class="eyebrow"><i class="ti ti-brain"></i>Ensemble AI Traffic Forecast</div>
+          <h1>Predict congestion, detect risk zones, and recommend faster alternate routes.</h1>
+          <p class="lead">The dashboard simulates a production traffic intelligence system using historical corridor records, live-feed adjustments, weather penalties, and peak-hour behavior to forecast the next two hours.</p>
+          <div class="feature-strip">
+            <div class="feature"><i class="ti ti-database"></i><strong>Historical Records</strong><span>Zone baseline, weekday behavior, event memory, and vehicle volume.</span></div>
+            <div class="feature"><i class="ti ti-cloud-rain"></i><strong>Weather Impact</strong><span>Rain, fog, heat, and visibility influence vehicle speed and delay.</span></div>
+            <div class="feature"><i class="ti ti-route"></i><strong>Route Engine</strong><span>Compares ETA, distance, risk exposure, and free OSRM map routes.</span></div>
+          </div>
+        </section>
+
+        <section class="panel score-card">
+          <div class="panel-title"><i class="ti ti-gauge"></i>Current Congestion</div>
+          <div class="score-ring" id="scoreRing">
+            <div>
+              <strong id="scoreValue">0%</strong>
+              <span id="scoreLabel">READY</span>
+            </div>
+          </div>
+          <div class="score-meta">
+            <div class="mini-stat"><span>Peak in 2h</span><strong id="peakValue">0%</strong></div>
+            <div class="mini-stat"><span>Avg delay</span><strong id="delayValue">0 min</strong></div>
+            <div class="mini-stat"><span>Vehicles/hr</span><strong id="vehicleValue">0</strong></div>
+            <div class="mini-stat"><span>Confidence</span><strong id="confidenceValue">0%</strong></div>
+          </div>
+        </section>
+      </div>
+
+      <section class="grid-2">
+        <section class="panel map-card">
+          <div class="panel-head">
+            <div class="panel-title"><i class="ti ti-map-2"></i>Interactive Traffic Visualization</div>
+            <span class="badge clear" id="mapStatus">LIVE</span>
+          </div>
+          <div class="panel-body">
+            <div class="traffic-map" id="trafficMap">
+              <div class="free-map" id="freeMap"></div>
+              <svg class="map-routes" id="mapRoutes" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true"></svg>
+              <div class="route-line best road-a"></div>
+              <div class="route-line alt road-b"></div>
+              <div class="route-line slow road-c"></div>
+              <div class="journey-marker source" id="sourceMarker"><i class="ti ti-map-pin"></i></div>
+              <div class="journey-marker destination" id="destinationMarker"><i class="ti ti-flag-3"></i></div>
+              <div class="trip-card" id="tripCard"></div>
+              <div class="map-legend">
+                <div class="legend-item"><span class="legend-swatch" style="background:var(--green)"></span>Best route</div>
+                <div class="legend-item"><span class="legend-swatch" style="background:var(--blue)"></span>Alternate route</div>
+                <div class="legend-item"><span class="legend-swatch" style="background:var(--red)"></span>Slow route</div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section class="panel">
+          <div class="panel-head">
+            <div class="panel-title"><i class="ti ti-chart-line"></i>Upcoming Time Intervals</div>
+          </div>
+          <div class="panel-body">
+            <div class="timeline" id="timeline"></div>
+          </div>
+        </section>
+      </section>
+
+      <section class="grid-2">
+        <section class="panel">
+          <div class="panel-head">
+            <div class="panel-title"><i class="ti ti-chart-area-line"></i>Forecast Curve</div>
+          </div>
+          <div class="panel-body">
+            <div class="chart-wrap"><canvas id="forecastCanvas"></canvas></div>
+          </div>
+        </section>
+
+        <section class="panel">
+          <div class="panel-head">
+            <div class="panel-title"><i class="ti ti-message-2-cog"></i>AI Traffic Analysis</div>
+          </div>
+          <div class="panel-body">
+            <div class="analysis" id="analysisText"></div>
+          </div>
+        </section>
+      </section>
+
+      <section class="grid-3">
+        <section class="panel">
+          <div class="panel-head">
+            <div class="panel-title"><i class="ti ti-alert-triangle"></i>High-Risk Zones</div>
+          </div>
+          <div class="panel-body"><div class="list" id="riskList"></div></div>
+        </section>
+
+        <section class="panel">
+          <div class="panel-head">
+            <div class="panel-title"><i class="ti ti-route-alt-left"></i>Route Recommendations</div>
+          </div>
+          <div class="panel-body"><div class="list" id="routeList"></div></div>
+        </section>
+
+        <section class="panel">
+          <div class="panel-head">
+            <div class="panel-title"><i class="ti ti-cpu"></i>Model Signals</div>
+          </div>
+          <div class="panel-body"><div class="signal-grid" id="signalGrid"></div></div>
+        </section>
+      </section>
+
+      <section class="panel">
+        <div class="panel-head">
+          <div class="panel-title"><i class="ti ti-circuit-board"></i>Traffic Prediction Model</div>
+        </div>
+        <div class="panel-body">
+          <div class="architecture">
+            <div class="model-step"><i class="ti ti-database-import"></i><strong>Data Fusion</strong><span>Historical vehicle counts, speed samples, signal timing, incidents, and weather inputs.</span></div>
+            <div class="model-step"><i class="ti ti-wave-sine"></i><strong>Temporal Learner</strong><span>LSTM-style trend memory captures rush-hour buildup and post-peak dissipation.</span></div>
+            <div class="model-step"><i class="ti ti-binary-tree"></i><strong>Gradient Model</strong><span>Tree-based scoring weighs weather, events, road capacity, and zone sensitivity.</span></div>
+            <div class="model-step"><i class="ti ti-map-route"></i><strong>Route Optimizer</strong><span>Ranks route choices by ETA, distance, congestion exposure, and reliability score.</span></div>
+          </div>
+        </div>
+      </section>
+    </section>
+  </div>
+</main>
+
+<script>
+const zones = [
+  { id: "mpnagar", name: "MP Nagar Junction", baseline: 64, capacity: 3300, x: 52, y: 47, coords: "23.2339,77.4308", history: [42, 51, 68, 82, 71, 58, 76], routes: [
+    ["Ring Road Diversion", "BEST", 18, 6.2, "Avoids signal clusters and market spillover"],
+    ["Habibganj Flyover Link", "ALT", 23, 7.1, "Stable speeds with moderate merging"],
+    ["Main Market Road", "SLOW", 34, 5.0, "Dense intersections and parking friction"]
+  ]},
+  { id: "dbcity", name: "DB City Road", baseline: 58, capacity: 2800, x: 42, y: 58, coords: "23.2320,77.4290", history: [38, 46, 57, 72, 78, 67, 61], routes: [
+    ["Service Lane Bypass", "BEST", 16, 4.8, "Lower mall entry conflict"],
+    ["Board Office Corridor", "ALT", 21, 5.9, "Predictable lights and wider lanes"],
+    ["Mall Front Road", "SLOW", 31, 3.9, "Drop-off queues reduce capacity"]
+  ]},
+  { id: "hamidia", name: "Hamidia Road", baseline: 69, capacity: 3000, x: 62, y: 30, coords: "23.2637,77.4064", history: [54, 63, 75, 84, 79, 66, 70], routes: [
+    ["VIP Road Connector", "BEST", 20, 6.7, "Bypasses hospital-side queueing"],
+    ["Peer Gate Link", "ALT", 25, 5.6, "Moderate load but shorter distance"],
+    ["Old City Spine", "SLOW", 39, 4.4, "Pedestrian crossings and narrow lanes"]
+  ]},
+  { id: "arera", name: "Arera Colony", baseline: 47, capacity: 2400, x: 35, y: 42, coords: "23.2145,77.4347", history: [31, 39, 46, 61, 57, 49, 45], routes: [
+    ["E-8 Internal Road", "BEST", 15, 4.1, "Light residential flow"],
+    ["Shahpura Lake Road", "ALT", 19, 5.3, "Good speed after first junction"],
+    ["Bittan Market Road", "SLOW", 28, 3.7, "Retail traffic slows turns"]
+  ]},
+  { id: "newmarket", name: "New Market", baseline: 62, capacity: 2600, x: 49, y: 72, coords: "23.2384,77.4010", history: [44, 52, 63, 70, 83, 74, 66], routes: [
+    ["Link Road 1", "BEST", 17, 5.2, "Fewer pedestrian crossings"],
+    ["TT Nagar Loop", "ALT", 22, 4.6, "Short but signal-heavy"],
+    ["Market Core Road", "SLOW", 36, 3.2, "Parking search traffic dominates"]
+  ]},
+  { id: "aiims", name: "AIIMS Bhopal Bypass", baseline: 51, capacity: 3200, x: 72, y: 62, coords: "23.2031,77.4567", history: [35, 41, 54, 65, 59, 48, 52], routes: [
+    ["Bypass Express Segment", "BEST", 14, 7.8, "High capacity and fewer signals"],
+    ["Saket Nagar Link", "ALT", 20, 5.8, "Moderate school-hour traffic"],
+    ["Hospital Frontage", "SLOW", 30, 4.5, "Ambulance and visitor queues"]
+  ]}
+];
+
+const weatherImpact = {
+  clear: { label: "Clear", load: 0, speed: 1, risk: 0 },
+  cloudy: { label: "Cloudy", load: 3, speed: .98, risk: 1 },
+  lightRain: { label: "Light rain", load: 9, speed: .9, risk: 8 },
+  heavyRain: { label: "Heavy rain", load: 18, speed: .78, risk: 16 },
+  fog: { label: "Fog", load: 13, speed: .82, risk: 12 },
+  heat: { label: "Extreme heat", load: 6, speed: .92, risk: 5 }
+};
+
+const dayImpact = {
+  weekday: { label: "Weekday", load: 8, risk: 5 },
+  weekend: { label: "Weekend", load: -7, risk: -4 },
+  holiday: { label: "Holiday", load: -12, risk: -8 },
+  festival: { label: "Festival", load: 17, risk: 14 },
+  exam: { label: "Exam season", load: 12, risk: 10 }
+};
+
+const peakCurve = { 6: 4, 8: 22, 10: 5, 13: 0, 16: 10, 18: 24, 21: -10 };
+const intervalCurve = [0, 6, 11, 2, -8];
+let currentPrediction = null;
+let selectedRouteTag = "BEST";
+let freeMap = null;
+let freeMapLayers = [];
+let freeRouteToken = 0;
+
+const zoneSelect = document.getElementById("zoneSelect");
+const sourceSelect = document.getElementById("sourceSelect");
+const destinationSelect = document.getElementById("destinationSelect");
+const timeSelect = document.getElementById("timeSelect");
+const weatherSelect = document.getElementById("weatherSelect");
+const daySelect = document.getElementById("daySelect");
+const incidentRange = document.getElementById("incidentRange");
+const incidentValue = document.getElementById("incidentValue");
+const apiStatus = document.getElementById("apiStatus");
+
+function clamp(value, min, max) {
+  return Math.max(min, Math.min(max, value));
+}
+
+function level(pct) {
+  if (pct >= 82) return { label: "CRITICAL", color: "var(--red)", cls: "severe" };
+  if (pct >= 66) return { label: "HIGH", color: "var(--yellow)", cls: "high" };
+  if (pct >= 42) return { label: "MODERATE", color: "var(--blue)", cls: "" };
+  return { label: "CLEAR", color: "var(--green)", cls: "clear" };
+}
+
+function seedNoise(zone, time, incident) {
+  const text = zone.id + time + incident;
+  let hash = 0;
+  for (let i = 0; i < text.length; i++) hash = ((hash << 5) - hash) + text.charCodeAt(i);
+  return Math.abs(hash % 9) - 4;
+}
+
+function populateZones() {
+  const options = zones.map(z => `<option value="${z.id}">${z.name}</option>`).join("");
+  zoneSelect.innerHTML = options;
+  sourceSelect.innerHTML = options;
+  destinationSelect.innerHTML = options;
+}
+
+function selectedZone() {
+  return zones.find(z => z.id === zoneSelect.value) || zones[0];
+}
+
+function selectedSource() {
+  return zones.find(z => z.id === sourceSelect.value) || zones[1];
+}
+
+function selectedDestination() {
+  return zones.find(z => z.id === destinationSelect.value) || selectedZone();
+}
+
+function latLng(zone) {
+  const [lat, lng] = zone.coords.split(",").map(Number);
+  return { lat, lng };
+}
+
+function predict() {
+  let source = selectedSource();
+  const destination = selectedDestination();
+  if (source.id === destination.id) {
+    source = zones.find(zone => zone.id !== destination.id) || source;
+    sourceSelect.value = source.id;
+  }
+  const zone = destination;
+  zoneSelect.value = destination.id;
+  const hour = Number(timeSelect.value);
+  const weather = weatherImpact[weatherSelect.value];
+  const day = dayImpact[daySelect.value];
+  const incident = Number(incidentRange.value);
+  const feedBoost =
+    (document.getElementById("iotFeed").checked ? 2 : -2) +
+    (document.getElementById("gpsFeed").checked ? 2 : -1) +
+    (document.getElementById("eventFeed").checked ? 10 : 0) +
+    (document.getElementById("signalFeed").checked ? -2 : 4);
+  const historyAvg = Math.round(zone.history.reduce((a, b) => a + b, 0) / zone.history.length);
+  const noise = seedNoise(zone, hour, incident);
+  const base = zone.baseline * .52 + historyAvg * .28 + (peakCurve[hour] || 0) + weather.load + day.load + incident + feedBoost + noise;
+  const current = clamp(Math.round(base), 12, 98);
+  const forecast = intervalCurve.map((shift, index) => {
+    const pct = clamp(Math.round(current + shift + (weather.risk / 5) - index * (hour >= 18 ? 1 : 0)), 10, 99);
+    const vehicles = Math.round(zone.capacity * (.45 + pct / 140));
+    return {
+      label: index === 0 ? "Now" : `+${index * 30} min`,
+      pct,
+      vehicles
+    };
+  });
+  const peak = Math.max(...forecast.map(f => f.pct));
+  const delay = Math.round((current / 100) * 26 + weather.risk / 3 + incident / 5);
+  const confidence = clamp(94 - Math.round(incident / 3) - (document.getElementById("eventFeed").checked ? 5 : 0), 76, 96);
+  const risks = buildRisks(zone, current, weather, day);
+  const routes = buildRoutes(source, destination, current, weather);
+  currentPrediction = { zone, source, destination, hour, weather, day, incident, current, forecast, peak, delay, confidence, risks, routes, historyAvg };
+  render(currentPrediction);
+  updateFreeRoute(currentPrediction);
+  document.dispatchEvent(new CustomEvent("trafficPredictionUpdated", { detail: currentPrediction }));
+}
+
+function buildRisks(activeZone, current, weather, day) {
+  return zones
+    .map((zone, index) => {
+      const proximity = zone.id === activeZone.id ? 14 : Math.max(0, 9 - Math.abs(activeZone.x - zone.x) / 7 - Math.abs(activeZone.y - zone.y) / 9);
+      const pct = clamp(Math.round(zone.baseline + weather.risk + day.risk + proximity + seedNoise(zone, current, index)), 24, 98);
+      const reason = pct >= 82 ? "Capacity breach likely within one signal cycle" :
+        pct >= 66 ? "Peak pressure and slow discharge expected" :
+        pct >= 42 ? "Moderate queue buildup near junction arms" :
+        "Stable movement with minor slowdowns";
+      return { ...zone, pct, reason };
+    })
+    .sort((a, b) => b.pct - a.pct)
+    .slice(0, 4);
+}
+
+function buildRoutes(source, destination, current, weather) {
+  const weatherPenalty = Math.round(weather.risk / 4);
+  const directKm = Math.hypot(destination.x - source.x, destination.y - source.y) / 6;
+  return destination.routes.map(([name, tag, minutes, km, reason], index) => {
+    const exposure = tag === "BEST" ? .16 : tag === "ALT" ? .28 : .55;
+    const routeDistance = Math.max(km, directKm + index * 1.4);
+    const eta = Math.round(minutes + routeDistance * 1.2 + current * exposure + weatherPenalty + index);
+    const reliability = clamp(Math.round(96 - exposure * current - weather.risk), 48, 96);
+    return { name, tag, eta, km: `${routeDistance.toFixed(1)} km`, reason, reliability, path: routePath(source, destination, tag) };
+  }).sort((a, b) => a.eta - b.eta);
+}
+
+function routePath(source, destination, tag) {
+  const mx = (source.x + destination.x) / 2;
+  const my = (source.y + destination.y) / 2;
+  const dx = destination.x - source.x;
+  const dy = destination.y - source.y;
+  const curve = tag === "BEST" ? -10 : tag === "ALT" ? 10 : 20;
+  const spread = tag === "BEST" ? .18 : tag === "ALT" ? -.24 : .34;
+  const cx1 = clamp(source.x + dx * .28 - dy * spread, 6, 94);
+  const cy1 = clamp(source.y + dy * .28 + dx * spread, 8, 92);
+  const cx2 = clamp(mx + curve, 6, 94);
+  const cy2 = clamp(my - curve / 2, 8, 92);
+  const cx3 = clamp(destination.x - dx * .28 + dy * spread, 6, 94);
+  const cy3 = clamp(destination.y - dy * .28 - dx * spread, 8, 92);
+  return `M ${source.x} ${source.y} C ${cx1} ${cy1}, ${cx2} ${cy2}, ${cx3} ${cy3} S ${destination.x} ${destination.y}, ${destination.x} ${destination.y}`;
+}
+
+function setApiStatus(message, state = "") {
+  apiStatus.textContent = message;
+  apiStatus.className = `api-status ${state}`;
+}
+
+function initFreeMap() {
+  if (!window.L) {
+    setApiStatus("Leaflet map library could not load. The prototype map fallback is still available.", "error");
+    return;
+  }
+  if (freeMap) return;
+  freeMap = L.map("freeMap", {
+    zoomControl: true,
+    attributionControl: true
+  }).setView([23.235, 77.42], 12);
+  L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", {
+    maxZoom: 19,
+    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
+  }).addTo(freeMap);
+  document.getElementById("trafficMap").classList.add("free-map-active");
+  setApiStatus("Free interactive map active: OpenStreetMap tiles + OSRM road routing.", "ready");
+}
+
+function clearFreeMapLayers() {
+  if (!freeMap) return;
+  freeMapLayers.forEach(layer => freeMap.removeLayer(layer));
+  freeMapLayers = [];
+}
+
+function addFreeLayer(layer) {
+  if (!freeMap) return;
+  layer.addTo(freeMap);
+  freeMapLayers.push(layer);
+}
+
+function updateFreeMapMarkers(data) {
+  if (!freeMap || !window.L) return;
+  const source = latLng(data.source);
+  const destination = latLng(data.destination);
+  addFreeLayer(L.marker(source).bindPopup(`<b>Source</b><br>${data.source.name}`));
+  addFreeLayer(L.marker(destination).bindPopup(`<b>Destination</b><br>${data.destination.name}`));
+  data.risks.forEach(zone => {
+    const lv = level(zone.pct);
+    const color = lv.cls === "severe" ? "#ff5c70" : lv.cls === "high" ? "#f8c14a" : lv.cls === "clear" ? "#25d695" : "#58a6ff";
+    addFreeLayer(L.circleMarker(latLng(zone), {
+      radius: 8 + zone.pct / 12,
+      color,
+      fillColor: color,
+      fillOpacity: .32,
+      weight: 2
+    }).bindPopup(`<b>${zone.name}</b><br>Congestion risk: ${zone.pct}%<br>${zone.reason}`));
+  });
+}
+
+async function updateFreeRoute(data) {
+  initFreeMap();
+  if (!freeMap || !window.L) return;
+  const token = ++freeRouteToken;
+  clearFreeMapLayers();
+  updateFreeMapMarkers(data);
+  const src = latLng(data.source);
+  const dst = latLng(data.destination);
+  const url = `https://router.project-osrm.org/route/v1/driving/${src.lng},${src.lat};${dst.lng},${dst.lat}?alternatives=true&overview=full&geometries=geojson&steps=false`;
+  try {
+    const res = await fetch(url);
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const routeData = await res.json();
+    if (token !== freeRouteToken) return;
+    if (routeData.code !== "Ok" || !routeData.routes?.length) throw new Error(routeData.code || "No route");
+    const osrmRoutes = routeData.routes.slice(0, 3);
+    data.routes = data.routes.map((route, index) => {
+      const osrmRoute = osrmRoutes[index] || osrmRoutes[0];
+      return {
+        ...route,
+        name: index === 0 ? "OSRM Fastest Route" : `OSRM Alternate ${index + 1}`,
+        eta: Math.round(osrmRoute.duration / 60),
+        km: `${(osrmRoute.distance / 1000).toFixed(1)} km`,
+        reliability: clamp(route.reliability + (index === 0 ? 4 : -2), 48, 98),
+        reason: index === 0 ? "Free OSRM road-network fastest path" : "Free OSRM alternate road path",
+        geojson: osrmRoute.geometry
+      };
+    }).sort((a, b) => a.eta - b.eta);
+    drawFreeRoutes(data);
+    setApiStatus(`Free route active: ${data.source.name} to ${data.destination.name}.`, "ready");
+    renderRoutes(data);
+    renderMap(data);
+    renderAnalysis(data);
+  } catch (error) {
+    if (token !== freeRouteToken) return;
+    drawPrototypeFreeRoute(data);
+    setApiStatus("OSRM route service unavailable. Showing map with prototype route estimates.", "error");
+  }
+}
+
+function drawFreeRoutes(data) {
+  if (!freeMap || !window.L) return;
+  const routeColor = { BEST: "#25d695", ALT: "#58a6ff", SLOW: "#ff5c70" };
+  const bounds = [];
+  data.routes.forEach(route => {
+    if (!route.geojson) return;
+    const latLngs = route.geojson.coordinates.map(([lng, lat]) => {
+      const point = [lat, lng];
+      bounds.push(point);
+      return point;
+    });
+    const active = route.tag === selectedRouteTag;
+    addFreeLayer(L.polyline(latLngs, {
+      color: routeColor[route.tag] || "#32d5e8",
+      weight: active ? 7 : 4,
+      opacity: active ? .95 : .42,
+      dashArray: route.tag === "SLOW" ? "8 8" : null
+    }).bindPopup(`<b>${route.name}</b><br>${route.eta} min ETA<br>${route.km}`));
+  });
+  if (bounds.length) freeMap.fitBounds(bounds, { padding: [34, 34] });
+}
+
+function drawPrototypeFreeRoute(data) {
+  if (!freeMap || !window.L) return;
+  const src = latLng(data.source);
+  const dst = latLng(data.destination);
+  addFreeLayer(L.polyline([src, dst], {
+    color: "#25d695",
+    weight: 6,
+    opacity: .85,
+    dashArray: "10 8"
+  }).bindPopup("Prototype route line"));
+  freeMap.fitBounds([src, dst], { padding: [34, 34] });
+}
+
+function render(data) {
+  renderScore(data);
+  renderTimeline(data);
+  renderCanvas(data);
+  renderMap(data);
+  renderRisks(data);
+  renderRoutes(data);
+  renderSignals(data);
+  renderAnalysis(data);
+}
+
+function renderScore(data) {
+  const lv = level(data.current);
+  const ring = document.getElementById("scoreRing");
+  ring.style.setProperty("--pct", data.current);
+  ring.style.setProperty("--ring", lv.color);
+  document.getElementById("scoreValue").textContent = `${data.current}%`;
+  document.getElementById("scoreLabel").textContent = lv.label;
+  document.getElementById("peakValue").textContent = `${data.peak}%`;
+  document.getElementById("delayValue").textContent = `${data.delay} min`;
+  document.getElementById("vehicleValue").textContent = data.forecast[0].vehicles.toLocaleString("en-IN");
+  document.getElementById("confidenceValue").textContent = `${data.confidence}%`;
+  const mapStatus = document.getElementById("mapStatus");
+  mapStatus.textContent = lv.label;
+  mapStatus.className = `badge ${lv.cls}`;
+}
+
+function renderTimeline(data) {
+  const timeline = document.getElementById("timeline");
+  timeline.innerHTML = data.forecast.map(f => {
+    const lv = level(f.pct);
+    return `<div class="time-row">
+      <span>${f.label}</span>
+      <div class="bar-track"><div class="bar-fill" style="width:${f.pct}%;background:${lv.color}"></div></div>
+      <strong>${f.pct}%</strong>
+      <em>${f.vehicles.toLocaleString("en-IN")} veh</em>
+      <span class="badge ${lv.cls}">${lv.label}</span>
+    </div>`;
+  }).join("");
+}
+
+function renderCanvas(data) {
+  const canvas = document.getElementById("forecastCanvas");
+  const rect = canvas.getBoundingClientRect();
+  const dpr = window.devicePixelRatio || 1;
+  canvas.width = Math.max(320, Math.floor(rect.width * dpr));
+  canvas.height = Math.max(220, Math.floor(rect.height * dpr));
+  const ctx = canvas.getContext("2d");
+  ctx.scale(dpr, dpr);
+  const w = canvas.width / dpr;
+  const h = canvas.height / dpr;
+  ctx.clearRect(0, 0, w, h);
+  const pad = { l: 42, r: 20, t: 20, b: 34 };
+  ctx.strokeStyle = "rgba(255,255,255,.09)";
+  ctx.lineWidth = 1;
+  ctx.font = "11px JetBrains Mono, monospace";
+  ctx.fillStyle = "#91a3bd";
+  for (let i = 0; i <= 4; i++) {
+    const y = pad.t + (h - pad.t - pad.b) * i / 4;
+    ctx.beginPath();
+    ctx.moveTo(pad.l, y);
+    ctx.lineTo(w - pad.r, y);
+    ctx.stroke();
+    ctx.fillText(`${100 - i * 25}%`, 8, y + 4);
+  }
+  const points = data.forecast.map((f, i) => ({
+    x: pad.l + (w - pad.l - pad.r) * i / (data.forecast.length - 1),
+    y: pad.t + (h - pad.t - pad.b) * (100 - f.pct) / 100,
+    ...f
+  }));
+  const gradient = ctx.createLinearGradient(0, pad.t, 0, h - pad.b);
+  gradient.addColorStop(0, "rgba(50,213,232,.35)");
+  gradient.addColorStop(1, "rgba(50,213,232,0)");
+  ctx.beginPath();
+  points.forEach((p, i) => i ? ctx.lineTo(p.x, p.y) : ctx.moveTo(p.x, p.y));
+  ctx.lineTo(points[points.length - 1].x, h - pad.b);
+  ctx.lineTo(points[0].x, h - pad.b);
+  ctx.closePath();
+  ctx.fillStyle = gradient;
+  ctx.fill();
+  ctx.beginPath();
+  points.forEach((p, i) => i ? ctx.lineTo(p.x, p.y) : ctx.moveTo(p.x, p.y));
+  ctx.strokeStyle = "#32d5e8";
+  ctx.lineWidth = 3;
+  ctx.stroke();
+  points.forEach(p => {
+    const lv = level(p.pct);
+    ctx.beginPath();
+    ctx.arc(p.x, p.y, 6, 0, Math.PI * 2);
+    ctx.fillStyle = lv.color.replace("var(--green)", "#25d695").replace("var(--blue)", "#58a6ff").replace("var(--yellow)", "#f8c14a").replace("var(--red)", "#ff5c70");
+    ctx.fill();
+    ctx.fillStyle = "#91a3bd";
+    ctx.fillText(p.label, p.x - 17, h - 10);
+  });
+}
+
+function renderMap(data) {
+  const map = document.getElementById("trafficMap");
+  const routeColor = { BEST: "var(--green)", ALT: "var(--blue)", SLOW: "var(--red)" };
+  const sourceMarker = document.getElementById("sourceMarker");
+  const destinationMarker = document.getElementById("destinationMarker");
+  const activeRoute = data.routes.find(route => route.tag === selectedRouteTag) || data.routes[0];
+  sourceMarker.style.left = `calc(${data.source.x}% - 21px)`;
+  sourceMarker.style.top = `calc(${data.source.y}% - 21px)`;
+  sourceMarker.title = `Source: ${data.source.name}`;
+  destinationMarker.style.left = `calc(${data.destination.x}% - 21px)`;
+  destinationMarker.style.top = `calc(${data.destination.y}% - 21px)`;
+  destinationMarker.title = `Destination: ${data.destination.name}`;
+  document.getElementById("mapRoutes").innerHTML = data.routes.map(route =>
+    `<path class="${route.tag === activeRoute.tag ? "active" : ""}" d="${route.path}" stroke="${routeColor[route.tag]}" stroke-width="${route.tag === activeRoute.tag ? 3.8 : 2.2}" stroke-dasharray="${route.tag === "SLOW" ? "5 4" : ""}"></path>`
+  ).join("");
+  document.getElementById("tripCard").innerHTML = `
+    <span>Source to destination</span>
+    <strong>${data.source.name} to ${data.destination.name}</strong>
+    <small>${activeRoute.name}: ${activeRoute.eta} min, ${activeRoute.km}, ${activeRoute.reliability}% reliable</small>
+  `;
+  map.querySelectorAll(".zone-node").forEach(node => node.remove());
+  data.risks.forEach(zone => {
+    const lv = level(zone.pct);
+    const node = document.createElement("button");
+    node.type = "button";
+    node.className = `zone-node ${zone.id === data.zone.id ? "active" : ""}`;
+    node.style.left = `calc(${zone.x}% - 23px)`;
+    node.style.top = `calc(${zone.y}% - 23px)`;
+    node.style.background = lv.color;
+    node.title = `${zone.name}: ${zone.pct}% ${lv.label}`;
+    node.innerHTML = `${zone.pct}<span class="node-label">${zone.name}</span>`;
+    node.addEventListener("click", () => {
+      zoneSelect.value = zone.id;
+      predict();
+    });
+    map.appendChild(node);
+  });
+}
+
+function renderRisks(data) {
+  const list = document.getElementById("riskList");
+  list.innerHTML = data.risks.map((risk, index) => {
+    const lv = level(risk.pct);
+    return `<article class="risk-item">
+      <div class="risk-top"><strong>#${index + 1} ${risk.name}</strong><span class="badge ${lv.cls}">${risk.pct}%</span></div>
+      <p>${risk.reason}. Suggested response: ${risk.pct >= 82 ? "deploy signal priority and divert inbound traffic" : risk.pct >= 66 ? "monitor queues and promote alternate corridors" : "continue observation"}.</p>
+    </article>`;
+  }).join("");
+}
+
+function openStreetMapUrl(zone) {
+  const source = currentPrediction?.source || zones[0];
+  const [sourceLat, sourceLng] = source.coords.split(",");
+  const [destLat, destLng] = zone.coords.split(",");
+  return `https://www.openstreetmap.org/directions?engine=fossgis_osrm_car&route=${sourceLat}%2C${sourceLng}%3B${destLat}%2C${destLng}`;
+}
+
+function renderRoutes(data) {
+  const list = document.getElementById("routeList");
+  list.innerHTML = data.routes.map(route => {
+    const cls = route.tag === "BEST" ? "clear" : route.tag === "SLOW" ? "severe" : "";
+    const selected = route.tag === selectedRouteTag ? " selected" : "";
+    return `<article class="route-item${selected}" data-route-tag="${route.tag}" tabindex="0" role="button" aria-label="Show ${route.name} on map">
+      <div class="route-top"><strong>${route.name}</strong><span class="badge ${cls}">${route.tag}</span></div>
+      <div class="route-meta"><span>${route.eta} min ETA</span><span>${route.km}</span><span>${route.reliability}% reliability</span></div>
+      <p>${route.reason}.</p>
+      <a class="map-link" href="${openStreetMapUrl(data.zone)}" target="_blank" rel="noopener">Open route in OpenStreetMap</a>
+    </article>`;
+  }).join("");
+  list.querySelectorAll(".route-item").forEach(item => {
+    item.addEventListener("click", event => {
+      if (event.target.closest("a")) return;
+      selectedRouteTag = item.dataset.routeTag;
+      if (freeMap) {
+        clearFreeMapLayers();
+        updateFreeMapMarkers(data);
+        drawFreeRoutes(data);
+      }
+      renderMap(data);
+      renderRoutes(data);
+    });
+    item.addEventListener("keydown", event => {
+      if (event.key !== "Enter" && event.key !== " ") return;
+      event.preventDefault();
+      selectedRouteTag = item.dataset.routeTag;
+      if (freeMap) {
+        clearFreeMapLayers();
+        updateFreeMapMarkers(data);
+        drawFreeRoutes(data);
+      }
+      renderMap(data);
+      renderRoutes(data);
+    });
+  });
+}
+
+function renderSignals(data) {
+  const signals = [
+    ["Historical avg", `${data.historyAvg}%`],
+    ["Weather factor", data.weather.label],
+    ["Peak-hour lift", `${peakCurve[data.hour] || 0}%`],
+    ["Incident load", `${data.incident}%`],
+    ["Road capacity", `${data.zone.capacity.toLocaleString("en-IN")}/hr`],
+    ["Forecast window", "120 min"],
+    ["Model type", "LSTM + XGBoost"],
+    ["Update cycle", "30 sec"],
+    ["Map data", freeMap ? "OpenStreetMap" : "Prototype"]
+  ];
+  document.getElementById("signalGrid").innerHTML = signals.map(([label, value]) =>
+    `<div class="signal"><span>${label}</span><strong>${value}</strong></div>`
+  ).join("");
+}
+
+function renderAnalysis(data) {
+  const best = data.routes.find(route => route.tag === selectedRouteTag) || data.routes[0];
+  const worstRisk = data.risks[0];
+  const nextBest = data.forecast.reduce((bestPoint, item) => item.pct < bestPoint.pct ? item : bestPoint, data.forecast[0]);
+  const lv = level(data.current);
+  document.getElementById("analysisText").innerHTML = `
+    <div>The model classifies <strong>${data.zone.name}</strong> as <strong>${lv.label}</strong> with ${data.current}% congestion and an expected peak of ${data.peak}% inside the next two hours.</div>
+    <div>Historical records for this corridor average ${data.historyAvg}%, while ${data.weather.label.toLowerCase()} conditions and the ${data.day.label.toLowerCase()} pattern are adding measurable delay pressure.</div>
+    <div>The safest travel window is <strong>${nextBest.label}</strong>, when the forecast falls to ${nextBest.pct}%. The highest-risk nearby zone is <strong>${worstRisk.name}</strong> at ${worstRisk.pct}%.</div>
+    <div>Displayed trip path: <strong>${data.source.name}</strong> to <strong>${data.destination.name}</strong>. Recommended route: <strong>${best.name}</strong>, with an estimated ${best.eta} minute trip and ${best.reliability}% reliability.</div>
+  `;
+}
+
+function mountReactControls() {
+  const mount = document.getElementById("reactControlPanel");
+  if (!mount || !window.React || !window.ReactDOM) return;
+  const h = React.createElement;
+
+  function ReactTrafficPanel() {
+    const [state, setState] = React.useState(() => ({
+      source: selectedSource().name,
+      destination: selectedDestination().name,
+      scenario: "Live Inputs",
+      congestion: currentPrediction?.current || 0
+    }));
+
+    React.useEffect(() => {
+      const sync = event => {
+        const data = event.detail || currentPrediction;
+        if (!data) return;
+        setState(prev => ({
+          ...prev,
+          source: data.source.name,
+          destination: data.destination.name,
+          congestion: data.current
+        }));
+      };
+      document.addEventListener("trafficPredictionUpdated", sync);
+      sync({ detail: currentPrediction });
+      return () => document.removeEventListener("trafficPredictionUpdated", sync);
+    }, []);
+
+    const runScenario = scenario => {
+      setState(prev => ({ ...prev, scenario: scenario.label }));
+      if (scenario.weather) weatherSelect.value = scenario.weather;
+      if (scenario.day) daySelect.value = scenario.day;
+      if (scenario.time) timeSelect.value = scenario.time;
+      if (Number.isFinite(scenario.incident)) {
+        incidentRange.value = String(scenario.incident);
+        incidentValue.textContent = `${scenario.incident}%`;
+      }
+      if (typeof scenario.eventFeed === "boolean") document.getElementById("eventFeed").checked = scenario.eventFeed;
+      predict();
+    };
+
+    const swapTrip = () => {
+      const oldSource = sourceSelect.value;
+      sourceSelect.value = destinationSelect.value;
+      destinationSelect.value = oldSource;
+      zoneSelect.value = destinationSelect.value;
+      selectedRouteTag = "BEST";
+      setState(prev => ({ ...prev, scenario: "Swapped Trip" }));
+      predict();
+    };
+
+    const scenarios = [
+      { label: "Rush + Rain", weather: "heavyRain", day: "weekday", time: "18", incident: 18, eventFeed: false },
+      { label: "Festival Surge", weather: "clear", day: "festival", time: "18", incident: 22, eventFeed: true },
+      { label: "Clear Flow", weather: "clear", day: "weekend", time: "10", incident: 2, eventFeed: false }
+    ];
+
+    return h("section", { className: "react-panel", "aria-label": "React interactive controls" },
+      h("div", { className: "react-panel-head" },
+        h("div", { className: "react-panel-title" }, h("i", { className: "ti ti-brand-react" }), "React Controls"),
+        h("span", { className: "react-chip" }, `${state.congestion}% LOAD`)
+      ),
+      h("div", { className: "react-trip" },
+        h("span", null, state.scenario),
+        h("strong", null, `${state.source} to ${state.destination}`)
+      ),
+      h("div", { className: "react-actions" },
+        h("button", { className: "react-action primary", type: "button", onClick: swapTrip }, "Swap Trip"),
+        scenarios.map(scenario =>
+          h("button", {
+            key: scenario.label,
+            className: "react-action",
+            type: "button",
+            onClick: () => runScenario(scenario)
+          }, scenario.label)
+        )
+      ),
+      h("div", { className: "react-note" }, "This panel is rendered by React and updates the map, route engine, forecast, and risk cards.")
+    );
+  }
+
+  ReactDOM.createRoot(mount).render(h(ReactTrafficPanel));
+}
+
+function resetInputs() {
+  zoneSelect.value = "mpnagar";
+  sourceSelect.value = "arera";
+  destinationSelect.value = "mpnagar";
+  selectedRouteTag = "BEST";
+  timeSelect.value = "8";
+  weatherSelect.value = "clear";
+  daySelect.value = "weekday";
+  incidentRange.value = "8";
+  document.getElementById("iotFeed").checked = true;
+  document.getElementById("gpsFeed").checked = true;
+  document.getElementById("eventFeed").checked = false;
+  document.getElementById("signalFeed").checked = true;
+  incidentValue.textContent = "8%";
+  predict();
+}
+
+populateZones();
+incidentRange.addEventListener("input", () => incidentValue.textContent = `${incidentRange.value}%`);
+document.getElementById("predictBtn").addEventListener("click", predict);
+document.getElementById("resetBtn").addEventListener("click", resetInputs);
+zoneSelect.addEventListener("change", () => {
+  destinationSelect.value = zoneSelect.value;
+  selectedRouteTag = "BEST";
+  predict();
+});
+destinationSelect.addEventListener("change", () => {
+  zoneSelect.value = destinationSelect.value;
+  selectedRouteTag = "BEST";
+  predict();
+});
+sourceSelect.addEventListener("change", () => {
+  if (sourceSelect.value === destinationSelect.value) {
+    const fallback = zones.find(zone => zone.id !== destinationSelect.value);
+    sourceSelect.value = fallback.id;
+  }
+  selectedRouteTag = "BEST";
+  predict();
+});
+[timeSelect, weatherSelect, daySelect].forEach(el => el.addEventListener("change", predict));
+["iotFeed", "gpsFeed", "eventFeed", "signalFeed"].forEach(id => document.getElementById(id).addEventListener("change", predict));
+window.addEventListener("resize", () => currentPrediction && renderCanvas(currentPrediction));
+mountReactControls();
+resetInputs();
+</script>
+</body>
+</html>

@@ -10,35 +10,44 @@ Peak-hour behavior
 Weather conditions
 Incident load
 Day patterns
+
+
 🗺️ Interactive Traffic Map
 OpenStreetMap + Leaflet integration
 Live route visualization
 Source → destination path tracking
+
 🤖 AI-Based Forecasting
 Simulated LSTM + XGBoost traffic prediction model
 Forecasts traffic for upcoming time intervals
+
 🚘 Route Recommendation Engine
 Suggests:
 Best route
 Alternate route
 Slow/high-risk route
 ETA + reliability analysis
+
+
 🌦️ Weather Impact Simulation
 Clear weather
 Rain
 Fog
 Heat
 Festival & holiday traffic effects
+
 ⚡ Real-Time Feed Controls
 IoT Sensors
 GPS Speed Feeds
 Event Alerts
 Signal Data
+
 📈 Traffic Analytics Dashboard
 Forecast curve visualization
 Congestion score ring
 Vehicle density stats
 Risk analysis panel
+
 🛠️ Technologies Used
 HTML5
 CSS3
@@ -47,6 +56,7 @@ React.js
 Leaflet.js
 OpenStreetMap API
 OSRM Routing API
+
 🧠 AI Model Workflow
 Data Fusion
 Historical traffic data
@@ -63,6 +73,8 @@ Route Optimization
 ETA calculation
 Reliability scoring
 Congestion-aware routing
+
+
 📍 Project Highlights
 Fully responsive UI
 Modern dashboard design
@@ -83,9 +95,9 @@ traffic_prediction_model.html
 
 in your browser.
 
-📸 Screenshots
 
-Add project screenshots here after uploading them to GitHub.
+LIVE LINK - https://ai-based-smart-traffic-congestion-p.vercel.app/
+
 
 🎯 Future Improvements
 Real live traffic API integration
